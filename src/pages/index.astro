@@ -1,0 +1,48 @@
+---
+import { ArrowRight, Database, ShieldCheck, Users } from "lucide-astro";
+import ListingCard from "../components/ListingCard.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { categories, getListings } from "../lib/listings";
+const listings = await getListings();
+const active = listings.filter((item) => !["expired", "disputed"].includes(item.status));
+---
+<BaseLayout title="PerkCommons — Open opportunities for everyone" description="Discover credible credits, grants, programs, discounts, and benefits in a free, community-maintained public index.">
+  <section class="border-b border-line bg-white py-16 sm:py-20">
+    <div class="container grid items-end gap-10 lg:grid-cols-[1.35fr_.65fr]">
+      <div>
+        <p class="mb-5 text-sm font-semibold text-brand">Open data. Human reviewed.</p>
+        <h1 class="max-w-4xl text-4xl font-semibold leading-tight tracking-normal text-ink sm:text-6xl">Opportunities should be easy to find.</h1>
+        <p class="mt-6 max-w-2xl text-lg leading-8 text-muted">Explore credible credits, grants, programs, discounts, and benefits. No subscription, no paywall, and no pay-to-verify listings.</p>
+        <div class="mt-8 flex flex-wrap gap-3"><a href="/opportunities/" class="inline-flex items-center gap-2 rounded-md bg-ink px-5 py-3 font-medium text-white no-underline">Browse the index <ArrowRight size={18} /></a><a href="/submit/" class="rounded-md border border-line bg-white px-5 py-3 font-medium text-ink no-underline">Contribute a listing</a></div>
+      </div>
+      <dl class="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line">
+        <div class="bg-canvas p-5"><dt class="text-xs uppercase text-muted">Published</dt><dd class="mt-2 text-3xl font-semibold">{active.length}</dd></div>
+        <div class="bg-canvas p-5"><dt class="text-xs uppercase text-muted">Categories</dt><dd class="mt-2 text-3xl font-semibold">{new Set(active.map((item) => item.category)).size}</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="container py-14" aria-labelledby="search-title">
+    <div class="flex flex-wrap items-end justify-between gap-5"><div><p class="text-sm font-semibold text-brand">Public index</p><h2 id="search-title" class="mt-2 text-3xl font-semibold">Find an opportunity</h2></div><a href="/opportunities/" class="inline-flex items-center gap-2 text-sm font-medium">View all <ArrowRight size={16} /></a></div>
+    <div id="search" class="mt-7"></div>
+    <noscript><p class="mt-5">Search needs JavaScript. You can still <a href="/opportunities/">browse every listing</a>.</p></noscript>
+    <div class="mt-10 grid gap-x-8 md:grid-cols-2 lg:grid-cols-3" data-pagefind-ignore>
+      {active.slice(0, 6).map((listing) => <ListingCard listing={listing} />)}
+    </div>
+  </section>
+
+  <section class="border-y border-line bg-white py-14">
+    <div class="container"><p class="text-sm font-semibold text-brand">Browse by category</p><div class="mt-6 flex flex-wrap gap-2">{Object.entries(categories).map(([slug, label]) => <a href={`/opportunities/?category=${slug}`} class="rounded-md border border-line bg-canvas px-4 py-2.5 text-sm no-underline hover:bg-soft">{label}</a>)}</div></div>
+  </section>
+
+  <section class="container py-16">
+    <div class="grid gap-10 md:grid-cols-3">
+      <div><ShieldCheck class="text-brand" size={24} /><h2 class="mt-4 font-semibold">Evidence over promises</h2><p class="mt-2 text-sm leading-6 text-muted">Every record shows its status, source, eligibility, and review date. Providers still control final terms.</p></div>
+      <div><Database class="text-brand" size={24} /><h2 class="mt-4 font-semibold">Open by default</h2><p class="mt-2 text-sm leading-6 text-muted">The factual dataset lives in Git under CC0. Download it, audit it, or build another public service with it.</p></div>
+      <div><Users class="text-brand" size={24} /><h2 class="mt-4 font-semibold">Community maintained</h2><p class="mt-2 text-sm leading-6 text-muted">Individuals and companies contribute under one published standard. Sponsorship cannot purchase verification.</p></div>
+    </div>
+  </section>
+  <link slot="head" href="/pagefind/pagefind-ui.css" rel="stylesheet" />
+  <script is:inline src="/pagefind/pagefind-ui.js"></script>
+  <script is:inline>window.addEventListener('DOMContentLoaded',()=>{if(window.PagefindUI)new window.PagefindUI({element:'#search',showSubResults:true,showImages:false,excerptLength:15});});</script>
+</BaseLayout>

@@ -1,0 +1,32 @@
+name: Site CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: PerkCommons/data
+          path: data
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/data/listings
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+        env:
+          PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/data/listings
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: dist

@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: PerkCommons/data
-          path: data
+          path: .data
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -21,7 +21,7 @@ jobs:
       - run: npm test
       - run: npm run build
         env:
-          PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/data/listings
+          PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/.data/listings
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

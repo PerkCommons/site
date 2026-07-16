@@ -1,13 +1,12 @@
-name: Site CI
+name: Deploy to Cloudflare Pages
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -23,7 +22,8 @@ jobs:
       - run: npm run build
         env:
           PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/data/listings
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
-        env:
-          PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/data/listings
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=perkcommons-site

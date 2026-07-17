@@ -63,10 +63,18 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     </header>
     <main id="main"><slot /></main>
     <footer class="mt-20 border-t border-line bg-surface py-12 text-sm text-muted">
-      <div class="container grid gap-8 md:grid-cols-[1.5fr_1fr_1fr]">
+      <div class="container grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_.8fr_.9fr_1.3fr]">
         <div><p class="font-semibold text-ink">PerkCommons</p><p class="mt-2 max-w-md leading-6">An open, community-maintained index of credible opportunities. Free to browse and reuse.</p></div>
         <div><p class="font-semibold text-ink">Project</p><a class="mt-3 block" href="/about/">About</a><a class="mt-2 block" href="https://github.com/PerkCommons/docs">Policies</a><a class="mt-2 block" href="https://github.com/PerkCommons/data">Dataset</a></div>
-        <div><p class="font-semibold text-ink">Participate</p><a class="mt-3 block" href="/submit/">Submit</a><a class="mt-2 block" href="https://github.com/PerkCommons/data/issues">Report a correction</a><a class="mt-2 block" href="mailto:security@perkcommons.org">Security</a></div>
+        <div><p class="font-semibold text-ink">Participate</p><a class="mt-3 block" href="/submit/">Submit</a><a class="mt-2 block" href="https://github.com/PerkCommons/data/issues">Report a correction</a></div>
+        <div aria-label="Contact">
+          <p class="font-semibold text-ink">Contact</p>
+          <a class="mt-3 block" href="mailto:hello@perkcommons.com">General</a>
+          <a class="mt-2 block" href="mailto:support@perkcommons.com">Support</a>
+          <a class="mt-2 block" href="mailto:security@perkcommons.com">Security</a>
+          <a class="mt-2 block" href="mailto:privacy@perkcommons.com">Privacy</a>
+          <a class="mt-2 block" href="mailto:press@perkcommons.com">Press</a>
+        </div>
       </div>
     </footer>
     <button

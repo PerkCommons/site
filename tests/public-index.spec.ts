@@ -25,6 +25,25 @@ test("home page exposes the public index without overflow", async ({
   });
 });
 
+test("footer exposes the public contact channels", async ({ page }) => {
+  await page.goto("/");
+  const footer = page.locator("footer");
+  const contacts = [
+    ["General", "mailto:hello@perkcommons.com"],
+    ["Support", "mailto:support@perkcommons.com"],
+    ["Security", "mailto:security@perkcommons.com"],
+    ["Privacy", "mailto:privacy@perkcommons.com"],
+    ["Press", "mailto:press@perkcommons.com"],
+  ] as const;
+
+  for (const [name, href] of contacts) {
+    await expect(footer.getByRole("link", { name, exact: true })).toHaveAttribute(
+      "href",
+      href,
+    );
+  }
+});
+
 test("directory filters records and preserves a stable layout", async ({
   page,
 }, testInfo) => {

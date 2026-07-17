@@ -374,7 +374,7 @@ test("ban controls are admin-only and require confirmation", async ({
     });
   });
   await page.route("**/api/moderation/moderators", async (route) => {
-    moderatorUpdate = route.request().method() === "POST";
+    if (route.request().method() === "POST") moderatorUpdate = true;
     await route.fulfill({
       status: 200,
       contentType: "application/json",

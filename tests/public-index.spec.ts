@@ -63,6 +63,60 @@ test("mobile navigation opens and remains keyboard accessible", async ({
   ).toBeVisible();
 });
 
+test("theme switch follows the system, persists, and stays offset", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+
+  const root = page.locator("html");
+  const toggle = page.getByRole("button", { name: "Switch to light mode" });
+  await expect(root).toHaveAttribute("data-theme", "dark");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+
+  const bounds = await toggle.boundingBox();
+  const viewport = page.viewportSize();
+  expect(bounds).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(bounds!.width).toBeGreaterThanOrEqual(44);
+  expect(bounds!.height).toBeGreaterThanOrEqual(44);
+  expect(bounds!.x).toBeGreaterThanOrEqual(12);
+  expect(viewport!.height - bounds!.y - bounds!.height).toBeGreaterThanOrEqual(
+    12,
+  );
+  expect(
+    await toggle.evaluate((element) =>
+      getComputedStyle(element)
+        .transitionDuration.split(",")
+        .some((duration) => Number.parseFloat(duration) >= 0.1),
+    ),
+  ).toBe(true);
+
+  await toggle.click();
+  await expect(root).toHaveAttribute("data-theme", "light");
+  await expect(
+    page.getByRole("button", { name: "Switch to dark mode" }),
+  ).toHaveAttribute("aria-pressed", "false");
+
+  await page.reload();
+  await expect(root).toHaveAttribute("data-theme", "light");
+});
+
+test("theme changes respect reduced motion", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.goto("/");
+  const toggle = page.getByRole("button", { name: "Switch to dark mode" });
+  expect(
+    await toggle.evaluate((element) =>
+      getComputedStyle(element)
+        .transitionDuration.split(",")
+        .every((duration) => Number.parseFloat(duration) <= 0.01),
+    ),
+  ).toBe(true);
+  await toggle.click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+});
+
 test("submission form sends a reviewable opportunity through the Worker", async ({
   page,
 }) => {

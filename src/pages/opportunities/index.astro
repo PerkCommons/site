@@ -8,8 +8,8 @@ const listings = await getListings();
   <section class="container py-14">
     <p class="text-sm font-semibold text-brand">Public index</p><h1 class="mt-2 text-4xl font-semibold">All opportunities</h1><p class="mt-4 max-w-2xl leading-7 text-muted">Filter the complete published dataset. Expired records remain visible for transparency.</p>
     <div class="mt-8 flex flex-col gap-4 border-y border-line py-5 sm:flex-row sm:items-center">
-      <label class="flex-1"><span class="sr-only">Filter listings by keyword</span><input id="filter" type="search" placeholder="Filter by title, provider, or tag" class="w-full rounded-md border border-line bg-white px-4 py-3 text-sm" /></label>
-      <label><span class="sr-only">Filter by category</span><select id="category" class="w-full rounded-md border border-line bg-white px-4 py-3 text-sm sm:w-56"><option value="">All categories</option>{Object.entries(categories).map(([value, label]) => <option value={value}>{label}</option>)}</select></label>
+      <label class="flex-1"><span class="sr-only">Filter listings by keyword</span><input id="filter" type="search" placeholder="Filter by title, provider, or tag" class="w-full rounded-md border border-line bg-surface px-4 py-3 text-sm" /></label>
+      <label><span class="sr-only">Filter by category</span><select id="category" class="w-full rounded-md border border-line bg-surface px-4 py-3 text-sm sm:w-56"><option value="">All categories</option>{Object.entries(categories).map(([value, label]) => <option value={value}>{label}</option>)}</select></label>
     </div>
     <p id="count" class="mt-6 text-sm text-muted" aria-live="polite">{listings.length} listings</p>
     <div id="listing-grid" class="mt-2 grid gap-x-8 md:grid-cols-2 lg:grid-cols-3">{listings.map((listing) => <div data-search={`${listing.title} ${listing.provider} ${listing.tags.join(" ")}`.toLowerCase()} data-category={listing.category}><ListingCard listing={listing} /></div>)}</div>

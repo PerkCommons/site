@@ -7,13 +7,13 @@ const listings = await getListings();
 const active = listings.filter((item) => !["expired", "disputed"].includes(item.status));
 ---
 <BaseLayout title="PerkCommons — Open opportunities for everyone" description="Discover credible credits, grants, programs, discounts, and benefits in a free, community-maintained public index.">
-  <section class="border-b border-line bg-white py-16 sm:py-20">
+  <section class="border-b border-line bg-surface py-16 sm:py-20">
     <div class="container grid items-end gap-10 lg:grid-cols-[1.35fr_.65fr]">
       <div>
         <p class="mb-5 text-sm font-semibold text-brand">Open data. Human reviewed.</p>
         <h1 class="max-w-4xl text-4xl font-semibold leading-tight tracking-normal text-ink sm:text-6xl">Opportunities should be easy to find.</h1>
         <p class="mt-6 max-w-2xl text-lg leading-8 text-muted">Explore credible credits, grants, programs, discounts, and benefits. No subscription, no paywall, and no pay-to-verify listings.</p>
-        <div class="mt-8 flex flex-wrap gap-3"><a href="/opportunities/" class="inline-flex items-center gap-2 rounded-md bg-ink px-5 py-3 font-medium text-white no-underline">Browse the index <ArrowRight size={18} /></a><a href="/submit/" class="rounded-md border border-line bg-white px-5 py-3 font-medium text-ink no-underline">Contribute a listing</a></div>
+        <div class="mt-8 flex flex-wrap gap-3"><a href="/opportunities/" class="inline-flex items-center gap-2 rounded-md bg-action px-5 py-3 font-medium text-white no-underline">Browse the index <ArrowRight size={18} /></a><a href="/submit/" class="rounded-md border border-line bg-surface px-5 py-3 font-medium text-ink no-underline">Contribute a listing</a></div>
       </div>
       <dl class="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line">
         <div class="bg-canvas p-5"><dt class="text-xs uppercase text-muted">Published</dt><dd class="mt-2 text-3xl font-semibold">{active.length}</dd></div>
@@ -31,7 +31,7 @@ const active = listings.filter((item) => !["expired", "disputed"].includes(item.
     </div>
   </section>
 
-  <section class="border-y border-line bg-white py-14">
+  <section class="border-y border-line bg-surface py-14">
     <div class="container"><p class="text-sm font-semibold text-brand">Browse by category</p><div class="mt-6 flex flex-wrap gap-2">{Object.entries(categories).map(([slug, label]) => <a href={`/opportunities/?category=${slug}`} class="rounded-md border border-line bg-canvas px-4 py-2.5 text-sm no-underline hover:bg-soft">{label}</a>)}</div></div>
   </section>
 

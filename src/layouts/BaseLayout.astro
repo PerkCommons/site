@@ -1,5 +1,5 @@
 ---
-import { Github, Menu, X } from "lucide-astro";
+import { Github, Menu, Moon, Sun, X } from "lucide-astro";
 import "../styles/global.css";
 
 interface Props { title: string; description: string; noindex?: boolean; }
@@ -14,6 +14,23 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex, nofollow, noarchive" />}
     <meta name="theme-color" content="#FAFBFC" />
+    <script is:inline>
+      (() => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem("perkcommons-theme");
+        } catch {}
+        const theme = saved === "dark" || saved === "light"
+          ? saved
+          : matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        document.documentElement.dataset.theme = theme;
+        document
+          .querySelector('meta[name="theme-color"]')
+          ?.setAttribute("content", theme === "dark" ? "#0D1117" : "#FAFBFC");
+      })();
+    </script>
     <link rel="icon" href="/favicon.svg" />
     <link rel="canonical" href={canonical} />
     <meta property="og:title" content={title} />
@@ -24,8 +41,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <slot name="head" />
   </head>
   <body>
-    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-white focus:px-4 focus:py-3">Skip to content</a>
-    <header class="border-b border-line bg-white">
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-surface focus:px-4 focus:py-3">Skip to content</a>
+    <header class="border-b border-line bg-surface">
       <div class="container flex min-h-16 items-center justify-between gap-4">
         <a href="/" class="flex items-center gap-2.5 no-underline" aria-label="PerkCommons home">
           <span class="brand-mark grid size-8 place-items-center rounded-md text-sm font-bold text-white">P</span>
@@ -36,7 +53,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
           <a href="/about/" class="hover:text-ink">How it works</a>
           <a href="https://github.com/PerkCommons/data" class="hover:text-ink">Open data</a>
           <a href="https://github.com/PerkCommons" class="inline-flex items-center gap-1.5 hover:text-ink"><Github size={16} /> GitHub</a>
-          <a href="/submit/" class="rounded-md bg-ink px-4 py-2.5 text-white hover:bg-black">Submit an opportunity</a>
+          <a href="/submit/" class="rounded-md bg-action px-4 py-2.5 text-white hover:bg-action-hover">Submit an opportunity</a>
         </nav>
         <button id="menu-button" class="grid size-10 place-items-center rounded-md border border-line md:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><Menu id="menu-open" size={20} /><X id="menu-close" class="hidden" size={20} /></button>
       </div>
@@ -45,13 +62,23 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       </nav>
     </header>
     <main id="main"><slot /></main>
-    <footer class="mt-20 border-t border-line bg-white py-12 text-sm text-muted">
+    <footer class="mt-20 border-t border-line bg-surface py-12 text-sm text-muted">
       <div class="container grid gap-8 md:grid-cols-[1.5fr_1fr_1fr]">
         <div><p class="font-semibold text-ink">PerkCommons</p><p class="mt-2 max-w-md leading-6">An open, community-maintained index of credible opportunities. Free to browse and reuse.</p></div>
         <div><p class="font-semibold text-ink">Project</p><a class="mt-3 block" href="/about/">About</a><a class="mt-2 block" href="https://github.com/PerkCommons/docs">Policies</a><a class="mt-2 block" href="https://github.com/PerkCommons/data">Dataset</a></div>
         <div><p class="font-semibold text-ink">Participate</p><a class="mt-3 block" href="/submit/">Submit</a><a class="mt-2 block" href="https://github.com/PerkCommons/data/issues">Report a correction</a><a class="mt-2 block" href="mailto:security@perkcommons.org">Security</a></div>
       </div>
     </footer>
+    <button
+      id="theme-toggle"
+      class="theme-toggle"
+      type="button"
+      aria-label="Switch color theme"
+      title="Switch color theme"
+    >
+      <Moon class="theme-icon theme-icon-moon" size={20} aria-hidden="true" />
+      <Sun class="theme-icon theme-icon-sun" size={20} aria-hidden="true" />
+    </button>
     <script>
       const button = document.querySelector<HTMLButtonElement>("#menu-button");
       const menu = document.querySelector<HTMLElement>("#mobile-menu");
@@ -62,6 +89,47 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         menu?.classList.toggle("hidden", open);
         document.querySelector("#menu-open")?.classList.toggle("hidden", !open);
         document.querySelector("#menu-close")?.classList.toggle("hidden", open);
+      });
+
+      const themeToggle = document.querySelector<HTMLButtonElement>("#theme-toggle");
+      const root = document.documentElement;
+      const colorScheme = matchMedia("(prefers-color-scheme: dark)");
+      const updateThemeControl = () => {
+        const dark = root.dataset.theme === "dark";
+        const label = dark ? "Switch to light mode" : "Switch to dark mode";
+        themeToggle?.setAttribute("aria-label", label);
+        themeToggle?.setAttribute("title", label);
+        themeToggle?.setAttribute("aria-pressed", String(dark));
+        document
+          .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+          ?.setAttribute("content", dark ? "#0D1117" : "#FAFBFC");
+      };
+      const applyTheme = (theme: "light" | "dark", persist: boolean) => {
+        root.classList.add("theme-transitioning");
+        root.dataset.theme = theme;
+        if (persist) {
+          try {
+            localStorage.setItem("perkcommons-theme", theme);
+          } catch {}
+        }
+        updateThemeControl();
+        window.setTimeout(
+          () => root.classList.remove("theme-transitioning"),
+          280,
+        );
+      };
+
+      updateThemeControl();
+      themeToggle?.addEventListener("click", () => {
+        applyTheme(root.dataset.theme === "dark" ? "light" : "dark", true);
+      });
+      colorScheme.addEventListener("change", (event) => {
+        let saved = null;
+        try {
+          saved = localStorage.getItem("perkcommons-theme");
+        } catch {}
+        if (!saved)
+          applyTheme(event.matches ? "dark" : "light", false);
       });
     </script>
   </body>

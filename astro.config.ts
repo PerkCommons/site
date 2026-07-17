@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
 export default defineConfig({
-  site: "https://perkcommons.org",
+  site: "https://perkcommons.com",
   output: "static",
   integrations: [sitemap()],
   vite: { plugins: [tailwindcss()] },

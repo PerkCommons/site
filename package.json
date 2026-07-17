@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "fetch:data": "node scripts/fetch-data.mjs",
+    "prebuild": "npm run fetch:data",
     "build": "astro check && astro build && pagefind --site dist",
     "preview": "astro preview",
     "check": "astro check && tsc --noEmit && tsc -p functions/tsconfig.json --noEmit",
@@ -23,6 +25,7 @@
     "@cloudflare/workers-types": "^5.20260716.1",
     "@playwright/test": "^1.61.1",
     "pagefind": "^1.5.2",
-    "typescript": "^6.0.0"
+    "typescript": "^6.0.0",
+    "wrangler": "^4.111.0"
   }
 }

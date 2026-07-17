@@ -127,6 +127,11 @@ test("moderator login exchanges the Supabase session for a secure Worker session
   );
   await mockModeration(page);
   await page.goto("/moderator-login/");
+  await expect(page.locator("#login-form")).toHaveAttribute("method", "post");
+  await expect(page.locator("#login-form")).toHaveAttribute(
+    "action",
+    "/api/auth/session",
+  );
   await page.getByLabel("Email").fill("moderator@perkcommons.org");
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -134,6 +139,31 @@ test("moderator login exchanges the Supabase session for a secure Worker session
   await expect(
     page.getByRole("heading", { name: "Open Infrastructure Grant" }),
   ).toBeVisible();
+});
+
+test("moderator credentials never enter the URL when JavaScript is unavailable", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  let submittedMethod = "";
+  await page.route("**/api/auth/session", (route) => {
+    submittedMethod = route.request().method();
+    return route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "invalid_request" } }),
+    });
+  });
+  await page.goto("/moderator-login/");
+  await page.getByLabel("Email").fill("moderator@perkcommons.org");
+  await page.getByLabel("Password").fill("not-a-real-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.waitForURL("**/api/auth/session");
+  expect(submittedMethod).toBe("POST");
+  expect(page.url()).not.toContain("moderator%40perkcommons.org");
+  expect(page.url()).not.toContain("not-a-real-password");
+  await context.close();
 });
 
 test("pending card renders evidence, country tooltip, links, and copy controls", async ({

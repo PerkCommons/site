@@ -35,14 +35,14 @@ import { categories } from "../lib/listings";
           <button
             id="refresh-queue"
             type="button"
-            class="grid size-11 place-items-center rounded-md border border-line bg-white"
+            class="grid size-11 place-items-center rounded-md border border-line bg-surface"
             aria-label="Refresh queue"
             title="Refresh queue"><RefreshCw size={18} /></button
           >
           <button
             id="logout-button"
             type="button"
-            class="grid size-11 place-items-center rounded-md border border-line bg-white"
+            class="grid size-11 place-items-center rounded-md border border-line bg-surface"
             aria-label="Sign out"
             title="Sign out"><LogOut size={18} /></button
           >
@@ -86,7 +86,7 @@ import { categories } from "../lib/listings";
 
       <div
         id="queue-state"
-        class="mt-5 rounded-md border border-line bg-white p-8 text-center text-muted"
+        class="mt-5 rounded-md border border-line bg-surface p-8 text-center text-muted"
         role="status"
       >
         Loading submissions...
@@ -98,13 +98,13 @@ import { categories } from "../lib/listings";
       >
         <article
           id="review-card"
-          class="review-card relative overflow-hidden rounded-md border border-line bg-white shadow-sm"
+          class="review-card relative overflow-hidden rounded-md border border-line bg-surface shadow-sm"
           aria-labelledby="submission-title"
           tabindex="-1"
         >
           <div
             id="swipe-overlay"
-            class="pointer-events-none absolute inset-0 z-10 hidden place-items-center bg-white/90 text-2xl font-bold"
+            class="pointer-events-none absolute inset-0 z-10 hidden place-items-center bg-surface/90 text-2xl font-bold"
             aria-hidden="true"
           >
           </div>
@@ -308,29 +308,29 @@ import { categories } from "../lib/listings";
           <button
             id="copy-menu-button"
             type="button"
-            class="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-ink px-4 font-medium text-white"
+            class="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-action px-4 font-medium text-white"
             aria-keyshortcuts="C"
             ><Clipboard size={18} /> Copy review brief</button
           >
           <button
             id="resolve-flags-button"
             type="button"
-            class="hidden min-h-11 w-full items-center justify-center gap-2 rounded-md border border-line bg-white px-4 font-medium"
+            class="hidden min-h-11 w-full items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 font-medium"
             ><Check size={18} /> Resolve active flags</button
           >
           <button
             id="ban-button"
             type="button"
-            class="admin-only hidden min-h-11 w-full items-center justify-center gap-2 rounded-md border border-red-300 bg-white px-4 font-medium text-red-700"
+            class="admin-only hidden min-h-11 w-full items-center justify-center gap-2 rounded-md border border-red-300 bg-surface px-4 font-medium text-red-700"
             ><Ban size={18} /> Abuse controls</button
           >
           <button
             id="moderators-button"
             type="button"
-            class="admin-only hidden min-h-11 w-full items-center justify-center gap-2 rounded-md border border-line bg-white px-4 font-medium"
+            class="admin-only hidden min-h-11 w-full items-center justify-center gap-2 rounded-md border border-line bg-surface px-4 font-medium"
             ><Users size={18} /> Manage moderators</button
           >
-          <div class="rounded-md border border-line bg-white p-4 text-sm">
+          <div class="rounded-md border border-line bg-surface p-4 text-sm">
             <h3 class="font-semibold">Queue context</h3><p
               class="mt-2 leading-6 text-muted"
             >
@@ -357,7 +357,7 @@ import { categories } from "../lib/listings";
 
   <div
     id="review-actions"
-    class="fixed inset-x-0 bottom-0 z-20 hidden border-t border-line bg-white/95 px-4 pb-[calc(.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur"
+    class="fixed inset-x-0 bottom-0 z-20 hidden border-t border-line bg-surface/95 px-4 pb-[calc(.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur"
   >
     <div class="mx-auto grid max-w-xl grid-cols-3 gap-3">
       <button
@@ -384,7 +384,7 @@ import { categories } from "../lib/listings";
   <div
     id="country-tooltip"
     role="tooltip"
-    class="pointer-events-none fixed z-50 hidden rounded bg-ink px-2 py-1 text-xs text-white"
+    class="pointer-events-none fixed z-50 hidden rounded bg-action px-2 py-1 text-xs text-white"
   >
   </div>
   <div id="announcer" class="sr-only" aria-live="assertive"></div>
@@ -620,7 +620,7 @@ import { categories } from "../lib/listings";
         <button
           type="button"
           data-copy="review"
-          class="min-h-11 rounded-md bg-ink px-4 font-medium text-white"
+          class="min-h-11 rounded-md bg-action px-4 font-medium text-white"
           >Copy review brief</button
         ><button
           type="button"
@@ -764,14 +764,14 @@ import { categories } from "../lib/listings";
         <label><span class="text-sm font-medium">Role</span><select name="role" class="mt-1 min-h-11 w-full rounded-md border border-line px-3"><option value="reviewer">Reviewer</option><option value="admin">Admin</option></select></label>
         <label class="flex min-h-11 items-center gap-3 self-end"><input type="checkbox" name="active" checked class="size-4" /> Active access</label>
       </div>
-      <button type="submit" class="mt-5 min-h-11 w-full rounded-md bg-ink px-4 font-semibold text-white">Save moderator profile</button>
+      <button type="submit" class="mt-5 min-h-11 w-full rounded-md bg-action px-4 font-semibold text-white">Save moderator profile</button>
       <section class="mt-6 border-t border-line pt-5" aria-labelledby="moderator-list-heading"><h3 id="moderator-list-heading" class="font-semibold">Moderator profiles</h3><div id="moderator-list" class="mt-3 space-y-2 text-sm text-muted"></div></section>
     </form>
   </dialog>
 
   <div
     id="undo-snackbar"
-    class="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 hidden w-[min(420px,calc(100%-2rem))] -translate-x-1/2 items-center justify-between gap-4 rounded-md bg-ink px-4 py-3 text-sm text-white shadow-xl"
+    class="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 hidden w-[min(420px,calc(100%-2rem))] -translate-x-1/2 items-center justify-between gap-4 rounded-md bg-action px-4 py-3 text-sm text-white shadow-xl"
     role="status"
   >
     <span id="undo-message"></span><button

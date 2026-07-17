@@ -310,7 +310,7 @@ function renderReports(reports: Array<Record<string, unknown>>) {
   }
   reports.forEach((report) => {
     const article = document.createElement("article");
-    article.className = "rounded-md border border-line bg-white p-5";
+    article.className = "rounded-md border border-line bg-surface p-5";
     const heading = document.createElement("h3");
     heading.className = "font-semibold";
     heading.textContent = `${String(report.reason)} - ${String(report.listing_id)}`;

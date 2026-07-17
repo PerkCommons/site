@@ -3,7 +3,7 @@ import { ArrowUpRight, CheckCircle2 } from "lucide-astro";
 import { categories, formatDate, statusLabel, type Listing } from "../lib/listings";
 const { listing } = Astro.props as { listing: Listing };
 ---
-<article class="group flex h-full flex-col border-t border-line py-6" data-category={listing.category}>
+<article class="listing-card group flex h-full flex-col border-t border-line py-6" data-category={listing.category}>
   <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
     <span class="rounded px-2 py-1 status-{listing.status}">{statusLabel(listing.status)}</span>
     <span class="text-muted">{categories[listing.category]}</span>

@@ -2,8 +2,9 @@
   "extends": "astro/tsconfigs/strictest",
   "compilerOptions": {
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+    "allowImportingTsExtensions": true
   },
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "functions"]
+  "exclude": ["dist", "functions", "worker"]
 }

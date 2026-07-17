@@ -21,6 +21,10 @@ a { text-underline-offset: 3px; }
 .status-active { color: #176b43; background: #e7f6ee; }
 .status-limited, .status-waitlist { color: #825313; background: #fff4d6; }
 .status-unconfirmed, .status-disputed, .status-expired { color: #9b2c2c; background: #fdecec; }
+.review-card { touch-action: pan-y; transition: transform 180ms ease; }
+.moderation-dialog { margin: auto; max-height: calc(100dvh - 2rem); }
+.moderation-dialog::backdrop { background: rgb(17 24 39 / 0.52); }
+body:has(.moderation-dialog[open]) { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

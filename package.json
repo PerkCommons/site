@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "dev:worker": "npm run build && wrangler dev",
     "fetch:data": "node scripts/fetch-data.mjs",
     "prebuild": "npm run fetch:data",
     "build": "astro check && astro build && pagefind --site dist",
     "preview": "astro preview",
-    "check": "astro check && tsc --noEmit && tsc -p functions/tsconfig.json --noEmit",
-    "test": "npm run check",
+    "check": "astro check && tsc --noEmit && tsc -p worker/tsconfig.json --noEmit",
+    "test": "npm run check && npm run test:unit",
+    "test:unit": "tsx --test tests/unit/*.test.ts",
     "test:browser": "playwright test"
   },
   "dependencies": {
@@ -26,6 +28,7 @@
     "@cloudflare/workers-types": "^5.20260716.1",
     "@playwright/test": "^1.61.1",
     "pagefind": "^1.5.2",
+    "tsx": "^4.23.1",
     "typescript": "^6.0.0",
     "wrangler": "^4.111.0"
   }

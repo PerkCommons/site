@@ -4,7 +4,8 @@ dist/
 .wrangler/
 .data/
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
 *.log
 test-results/

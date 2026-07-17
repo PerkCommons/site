@@ -1,26 +1,136 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { categories } from "../lib/listings";
-const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
 ---
-<BaseLayout title="Submit an opportunity — PerkCommons" description="Propose a credible opportunity for community review and publication.">
-  <section class="container py-14"><div class="max-w-2xl"><p class="text-sm font-semibold text-brand">Community contribution</p><h1 class="mt-2 text-4xl font-semibold">Submit an opportunity</h1><p class="mt-4 leading-7 text-muted">Submissions are reviewed before publication. Cite an official source and disclose any affiliation. Do not send confidential or personal information.</p>
-    <form id="submission-form" action="/api/submissions" method="post" class="mt-10 space-y-6" novalidate>
-      <div class="hidden" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off" /></label></div>
-      <label class="block"><span class="text-sm font-medium">Provider <span aria-hidden="true">*</span></span><input required name="provider" maxlength="100" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" autocomplete="organization" /></label>
-      <label class="block"><span class="text-sm font-medium">Opportunity title <span aria-hidden="true">*</span></span><input required name="title" maxlength="140" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" /></label>
-      <label class="block"><span class="text-sm font-medium">Category <span aria-hidden="true">*</span></span><select required name="category" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"><option value="">Choose a category</option>{Object.entries(categories).map(([value, label]) => <option value={value}>{label}</option>)}</select></label>
-      <label class="block"><span class="text-sm font-medium">Official source URL <span aria-hidden="true">*</span></span><input required type="url" name="sourceUrl" maxlength="500" placeholder="https://" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" /></label>
-      <label class="block"><span class="text-sm font-medium">Eligibility and benefit <span aria-hidden="true">*</span></span><textarea required name="details" minlength="30" maxlength="2000" rows="6" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"></textarea></label>
-      <label class="block"><span class="text-sm font-medium">Your email <span class="font-normal text-muted">(optional, never published)</span></span><input type="email" name="email" maxlength="254" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" autocomplete="email" /></label>
-      <label class="flex gap-3 text-sm leading-6"><input required type="checkbox" name="affiliationConfirmed" value="true" class="mt-1 size-4" /><span>I have disclosed my affiliation in the details, or I have no affiliation with this provider.</span></label>
-      {turnstileKey && <div class="cf-turnstile" data-sitekey={turnstileKey}></div>}
-      <button type="submit" class="rounded-md bg-ink px-5 py-3 font-medium text-white">Send for review</button><p id="form-status" class="text-sm" role="status" aria-live="polite"></p>
-    </form>
-  </div></section>
-  {turnstileKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>}
+
+<BaseLayout
+  title="Submit an opportunity - PerkCommons"
+  description="Propose a credible opportunity for community review and publication."
+>
+  <section class="container py-14">
+    <div class="max-w-2xl">
+      <p class="text-sm font-semibold text-brand">Community contribution</p>
+      <h1 class="mt-2 text-4xl font-semibold">Submit an opportunity</h1>
+      <p class="mt-4 leading-7 text-muted">
+        Submissions are reviewed before publication. Cite an official source and
+        disclose any affiliation. Do not send confidential or personal information.
+      </p>
+
+      <form id="submission-form" class="mt-10 space-y-6" novalidate>
+        <div class="hidden" aria-hidden="true">
+          <label>Website <input name="website" tabindex="-1" autocomplete="off" /></label>
+        </div>
+
+        <label class="block">
+          <span class="text-sm font-medium">Provider <span aria-hidden="true">*</span></span>
+          <input required name="organization" maxlength="100" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" autocomplete="organization" />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium">Opportunity title <span aria-hidden="true">*</span></span>
+          <input required name="name" maxlength="140" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium">Category <span aria-hidden="true">*</span></span>
+          <select required name="category" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3">
+            <option value="">Choose a category</option>
+            {Object.entries(categories).map(([value, label]) => <option value={value}>{label}</option>)}
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium">Official source URL <span aria-hidden="true">*</span></span>
+          <input required type="url" name="source_url" maxlength="500" placeholder="https://" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium">Description <span aria-hidden="true">*</span></span>
+          <textarea required name="description" minlength="30" maxlength="2000" rows="5" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"></textarea>
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium">Eligibility <span aria-hidden="true">*</span></span>
+          <textarea required name="eligibility" minlength="20" maxlength="2000" rows="4" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"></textarea>
+        </label>
+
+        <div class="grid gap-6 sm:grid-cols-2">
+          <label class="block">
+            <span class="text-sm font-medium">Location <span class="font-normal text-muted">(optional)</span></span>
+            <input name="location" maxlength="120" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" placeholder="Global" />
+          </label>
+          <label class="block">
+            <span class="text-sm font-medium">Deadline <span class="font-normal text-muted">(optional)</span></span>
+            <input type="date" name="deadline" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" />
+          </label>
+        </div>
+
+        <label class="block">
+          <span class="text-sm font-medium">Your name <span class="font-normal text-muted">(optional)</span></span>
+          <input name="submitter_name" maxlength="100" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" autocomplete="name" />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium">Your email <span class="font-normal text-muted">(optional, never published)</span></span>
+          <input type="email" name="submitter_email" maxlength="254" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" autocomplete="email" />
+        </label>
+
+        <label class="flex gap-3 text-sm leading-6">
+          <input required type="checkbox" name="affiliationConfirmed" value="true" class="mt-1 size-4" />
+          <span>I have disclosed my affiliation in the description, or I have no affiliation with this provider.</span>
+        </label>
+
+        <button type="submit" class="rounded-md bg-ink px-5 py-3 font-medium text-white disabled:cursor-wait disabled:opacity-60">
+          Send for review
+        </button>
+        <p id="form-status" class="text-sm" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
   <script>
-    const form = document.querySelector<HTMLFormElement>("#submission-form"); const status = document.querySelector<HTMLElement>("#form-status");
-    form?.addEventListener("submit", async (event) => { event.preventDefault(); if (!form.reportValidity()) return; const button = form.querySelector<HTMLButtonElement>("button[type=submit]"); if (button) button.disabled = true; if (status) status.textContent = "Sending…"; try { const response = await fetch(form.action, { method: "POST", body: new FormData(form), headers: { Accept: "application/json" } }); const payload = await response.json() as { message?: string }; if (!response.ok) throw new Error(payload.message ?? "Submission failed."); form.reset(); if (status) status.textContent = "Submitted. A moderator will review the evidence before publication."; } catch (error) { if (status) status.textContent = error instanceof Error ? error.message : "Submission failed."; } finally { if (button) button.disabled = false; } });
+    import { supabase } from "../lib/supabase";
+
+    const form = document.querySelector<HTMLFormElement>("#submission-form");
+    const status = document.querySelector<HTMLElement>("#form-status");
+
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
+
+      const formData = new FormData(form);
+      if (formData.get("website")) return;
+
+      const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
+      if (button) button.disabled = true;
+      if (status) status.textContent = "Sending...";
+
+      const optionalValue = (name: string) => {
+        const value = String(formData.get(name) ?? "").trim();
+        return value || null;
+      };
+
+      const { error } = await supabase.from("opportunity_submissions").insert({
+        organization: String(formData.get("organization") ?? "").trim(),
+        name: String(formData.get("name") ?? "").trim(),
+        categories: [String(formData.get("category") ?? "")],
+        source_url: String(formData.get("source_url") ?? "").trim(),
+        description: String(formData.get("description") ?? "").trim(),
+        eligibility: String(formData.get("eligibility") ?? "").trim(),
+        location: optionalValue("location"),
+        deadline: optionalValue("deadline"),
+        submitter_name: optionalValue("submitter_name"),
+        submitter_email: optionalValue("submitter_email"),
+      });
+
+      if (error) {
+        if (status) status.textContent = "Submission failed. Please try again later.";
+      } else {
+        form.reset();
+        if (status) status.textContent = "Submitted. A moderator will review the evidence before publication.";
+      }
+
+      if (button) button.disabled = false;
+    });
   </script>
 </BaseLayout>

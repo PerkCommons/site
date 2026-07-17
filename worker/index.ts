@@ -35,15 +35,15 @@ async function api(request: Request, env: Env): Promise<Response> {
   try {
     if (path === "/api/submissions")
       return request.method === "POST"
-        ? handlePublicSubmission(request, env)
+        ? await handlePublicSubmission(request, env)
         : methodNotAllowed();
     if (path === "/api/reports")
       return request.method === "POST"
-        ? handlePublicReport(request, env)
+        ? await handlePublicReport(request, env)
         : methodNotAllowed();
     if (path === "/api/auth/session")
       return request.method === "POST"
-        ? createSession(request, env)
+        ? await createSession(request, env)
         : methodNotAllowed();
     if (path === "/api/auth/logout")
       return request.method === "POST"
@@ -51,35 +51,35 @@ async function api(request: Request, env: Env): Promise<Response> {
         : methodNotAllowed();
     if (path === "/api/auth/me")
       return request.method === "GET"
-        ? currentModerator(request, env)
+        ? await currentModerator(request, env)
         : methodNotAllowed();
     if (path === "/api/moderation/queue")
       return request.method === "GET"
-        ? queue(request, env)
+        ? await queue(request, env)
         : methodNotAllowed();
     if (path === "/api/moderation/reports")
       return request.method === "GET"
-        ? reports(request, env)
+        ? await reports(request, env)
         : methodNotAllowed();
     if (path === "/api/moderation/moderators")
       return request.method === "GET" || request.method === "POST"
-        ? moderators(request, env)
+        ? await moderators(request, env)
         : methodNotAllowed();
     if (path === "/api/moderation/bans")
       return request.method === "GET"
-        ? bans(request, env)
+        ? await bans(request, env)
         : request.method === "POST"
-          ? createBan(request, env)
+          ? await createBan(request, env)
           : methodNotAllowed();
     const detailMatch = path.match(submissionDetailPattern);
     if (detailMatch?.[1])
       return request.method === "GET"
-        ? submissionDetail(request, env, detailMatch[1])
+        ? await submissionDetail(request, env, detailMatch[1])
         : methodNotAllowed();
     const actionMatch = path.match(submissionActionPattern);
     if (actionMatch?.[1] && actionMatch[2])
       return request.method === "POST"
-        ? moderationAction(
+        ? await moderationAction(
             request,
             env,
             actionMatch[1],
@@ -89,12 +89,12 @@ async function api(request: Request, env: Env): Promise<Response> {
     const banMatch = path.match(banPattern);
     if (banMatch?.[1])
       return request.method === "DELETE"
-        ? removeBan(request, env, banMatch[1])
+        ? await removeBan(request, env, banMatch[1])
         : methodNotAllowed();
     const reportMatch = path.match(reportPattern);
     if (reportMatch?.[1])
       return request.method === "POST"
-        ? resolveReport(request, env, reportMatch[1])
+        ? await resolveReport(request, env, reportMatch[1])
         : methodNotAllowed();
     return new Response(
       JSON.stringify({

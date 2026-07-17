@@ -46,6 +46,11 @@ editor. The migration:
 - adds role-checking transactional functions for moderation actions and undo;
 - keeps ordinary moderation history append-only.
 
+Apply migrations in filename order. Migration
+`202607170003_submission_website_compatibility.sql` copies legacy
+`website_url` values into `organization_website_url` and removes the obsolete
+not-null requirement that predates the Worker submission API.
+
 Approval does not publish a listing. A later trusted integration can read
 `normalized_opportunities` and prepare a draft pull request for
 `PerkCommons/data`.

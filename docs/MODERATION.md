@@ -123,11 +123,51 @@ secret in source control.
 
 ## Privacy and retention
 
-Fingerprints and submitter contact details are private moderation data. Define
-and publish a retention schedule before production use. A reasonable starting
-point is to remove unused fingerprints and contact fields 90 days after a final
-rejection or withdrawal, while retaining minimal non-identifying audit events.
-Legal and community policy should determine the final periods.
+Fingerprints and submitter contact details are private moderation data. The
+project has adopted this retention schedule:
+
+| Data | Retention |
+| --- | --- |
+| Pending, reviewing, or flagged submissions | Human review required after 180 days; no automatic decision |
+| Submitter contact details and fingerprints after rejection, withdrawal, or publication | 90 days |
+| Resolved report contact details and fingerprints | 90 days |
+| Expired temporary ban records | 90 days after expiry |
+| Permanent bans | Manual review every 12 months |
+| Sensitive internal notes and resolved report details | 1 year |
+| Minimal moderation actions, resolved flags, and resolved reports | 3 years |
+| Normalized public opportunity data | Indefinite while useful |
+
+`supabase/migrations/202607170002_moderation_retention.sql` installs
+`apply_moderation_retention()` and schedules it daily at 03:23 UTC with
+Supabase Cron. The function redacts private fields, deletes expired private
+records, and writes aggregate counts to the RLS-protected
+`moderation_retention_runs` table. It only reports submissions awaiting review
+for more than 180 days and permanent bans older than one year; it does not make
+those human decisions. The initial accountable maintainer, `CodWasTaken`,
+reviews those counts quarterly. The canonical public policy and decision record
+live in the `PerkCommons/docs` repository.
+
+The cleanup function is the only privileged exception to append-only
+moderation history. It removes sensitive notes after one year and complete
+audit events after three years according to the adopted policy. Changes to
+these periods require a policy update, ADR, and migration review.
+
+After applying the migration, verify the schedule and inspect completed runs:
+
+```sql
+select jobid, jobname, schedule, active
+from cron.job
+where jobname = 'perkcommons-moderation-retention';
+
+select ran_at, results
+from public.moderation_retention_runs
+order by ran_at desc
+limit 20;
+```
+
+Administrators may execute `select public.apply_moderation_retention();` from
+the Supabase SQL editor for an initial run. The function is idempotent and its
+aggregate result contains no contact data or fingerprints.
 
 The full copy brief contains private submitter and moderation information and
 displays a warning. The redacted brief excludes submitter identity, private
@@ -177,8 +217,12 @@ database messages, ban matches, fingerprints, or credentials.
 
 ## Rate limiting and Turnstile
 
-The Worker checks recent keyed IP fingerprints in Supabase and supports an
-optional Cloudflare rate-limit binding named `SUBMISSION_RATE_LIMITER`.
+The Worker checks recent keyed IP fingerprints in Supabase and uses the native
+Cloudflare rate-limit binding named `SUBMISSION_RATE_LIMITER`. The binding
+allows five combined submission and report attempts per fingerprint per minute
+at each Cloudflare location. Cloudflare's limiter is deliberately permissive
+and eventually consistent, so the database-backed five-per-hour check remains
+the durable second layer.
 Turnstile verification is activated only when `TURNSTILE_SECRET_KEY` is set;
 the browser widget is activated by `PUBLIC_TURNSTILE_SITE_KEY`. Configure both
 or neither.
@@ -188,10 +232,10 @@ or neither.
 - [ ] Review and apply the Supabase migration.
 - [ ] Create the first Auth user and administrator profile.
 - [ ] Set all Cloudflare build variables and Worker runtime secrets.
-- [ ] Optionally configure Turnstile and a Cloudflare rate-limit binding.
+- [ ] Configure Turnstile and confirm the `SUBMISSION_RATE_LIMITER` binding.
 - [ ] Run `npm ci`, `npm run check`, `npm test`, `npm run build`, and
       `npm run test:browser`.
 - [ ] Confirm `/moderate/` redirects without a valid moderator cookie.
 - [ ] Confirm reviewer and admin permissions with separate test accounts.
 - [ ] Submit a non-production test record and verify country/fingerprint fields.
-- [ ] Adopt and document a private-data retention schedule.
+- [ ] Apply the retention migration and inspect its first scheduled run.

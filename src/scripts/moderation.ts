@@ -483,6 +483,83 @@ function isTyping(target: EventTarget | null): boolean {
   );
 }
 
+async function loadBans() {
+  const list = element("#ban-list");
+  list.textContent = "Loading active controls...";
+  try {
+    const result = await api<{
+      bans: Array<{
+        id: string;
+        identifier_type: string;
+        display_hint: string;
+        reason: string;
+        mode: string;
+        expires_at: string | null;
+      }>;
+    }>("/api/moderation/bans");
+    list.replaceChildren();
+    if (!result.bans.length) {
+      list.textContent = "No active abuse controls.";
+      return;
+    }
+    result.bans.forEach((ban) => {
+      const row = document.createElement("div");
+      row.className =
+        "flex items-center justify-between gap-3 rounded bg-soft p-3";
+      const label = document.createElement("span");
+      label.textContent = `${ban.display_hint} · ${ban.mode} · ${ban.reason}${ban.expires_at ? ` · expires ${new Date(ban.expires_at).toLocaleDateString()}` : " · permanent"}`;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "min-h-11 shrink-0 px-2 font-medium text-red-700";
+      remove.textContent = "Remove";
+      remove.addEventListener("click", async () => {
+        if (!confirm("Remove this abuse control? The removal will be audited."))
+          return;
+        try {
+          await api(`/api/moderation/bans/${ban.id}`, { method: "DELETE" });
+          row.remove();
+          announcer.textContent = "Abuse control removed.";
+        } catch (error) {
+          announcer.textContent =
+            error instanceof Error ? error.message : "Removal failed.";
+        }
+      });
+      row.append(label, remove);
+      list.append(row);
+    });
+  } catch (error) {
+    list.textContent =
+      error instanceof Error ? error.message : "Could not load abuse controls.";
+  }
+}
+
+async function loadModerators() {
+  const list = element("#moderator-list");
+  list.textContent = "Loading moderator profiles...";
+  try {
+    const result = await api<{
+      moderators: Array<{
+        user_id: string;
+        role: string;
+        active: boolean;
+      }>;
+    }>("/api/moderation/moderators");
+    list.replaceChildren();
+    result.moderators.forEach((profile) => {
+      const row = document.createElement("p");
+      row.className = "rounded bg-soft p-3 break-all";
+      row.textContent = `${profile.user_id} · ${profile.role} · ${profile.active ? "active" : "inactive"}`;
+      list.append(row);
+    });
+    if (!result.moderators.length) list.textContent = "No moderator profiles.";
+  } catch (error) {
+    list.textContent =
+      error instanceof Error
+        ? error.message
+        : "Could not load moderator profiles.";
+  }
+}
+
 element("#queue-tabs").addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
     "[data-queue]",
@@ -511,9 +588,14 @@ element("#copy-menu-button").addEventListener("click", () =>
 element("#research-menu-button").addEventListener("click", () =>
   openDialog("#research-dialog"),
 );
-element("#ban-button").addEventListener("click", () =>
-  openDialog("#ban-dialog"),
-);
+element("#ban-button").addEventListener("click", () => {
+  openDialog("#ban-dialog");
+  void loadBans();
+});
+element("#moderators-button").addEventListener("click", () => {
+  openDialog("#moderators-dialog");
+  void loadModerators();
+});
 element("#undo-button").addEventListener("click", () => void undo());
 document
   .querySelectorAll<HTMLElement>("[data-close-dialog]")
@@ -611,6 +693,32 @@ banForm.addEventListener("submit", async (event) => {
       error instanceof Error ? error.message : "Abuse control failed.";
   }
 });
+
+element<HTMLFormElement>("#moderators-form").addEventListener(
+  "submit",
+  async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    if (!form.reportValidity()) return;
+    const data = new FormData(form);
+    try {
+      await api("/api/moderation/moderators", {
+        method: "POST",
+        body: JSON.stringify({
+          user_id: data.get("user_id"),
+          role: data.get("role"),
+          active: data.get("active") === "on",
+        }),
+      });
+      announcer.textContent = "Moderator profile updated.";
+      form.reset();
+      void loadModerators();
+    } catch (error) {
+      announcer.textContent =
+        error instanceof Error ? error.message : "Profile update failed.";
+    }
+  },
+);
 
 document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((button) =>
   button.addEventListener("click", async () => {

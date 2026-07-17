@@ -2,6 +2,7 @@ import { requireModerator } from "./lib/auth";
 import { methodNotAllowed } from "./lib/http";
 import type { Env } from "./lib/types";
 import {
+  bans,
   createBan,
   createSession,
   currentModerator,
@@ -65,9 +66,11 @@ async function api(request: Request, env: Env): Promise<Response> {
         ? moderators(request, env)
         : methodNotAllowed();
     if (path === "/api/moderation/bans")
-      return request.method === "POST"
-        ? createBan(request, env)
-        : methodNotAllowed();
+      return request.method === "GET"
+        ? bans(request, env)
+        : request.method === "POST"
+          ? createBan(request, env)
+          : methodNotAllowed();
     const detailMatch = path.match(submissionDetailPattern);
     if (detailMatch?.[1])
       return request.method === "GET"

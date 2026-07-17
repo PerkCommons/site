@@ -360,12 +360,29 @@ test("ban controls are admin-only and require confirmation", async ({
 }) => {
   await mockModeration(page, { role: "admin" });
   let banRequest = false;
+  let moderatorUpdate = false;
   await page.route("**/api/moderation/bans", async (route) => {
-    banRequest = true;
+    banRequest = route.request().method() === "POST";
     await route.fulfill({
-      status: 201,
+      status: route.request().method() === "POST" ? 201 : 200,
       contentType: "application/json",
-      body: JSON.stringify({ message: "Created" }),
+      body: JSON.stringify(
+        route.request().method() === "POST"
+          ? { message: "Created" }
+          : { bans: [] },
+      ),
+    });
+  });
+  await page.route("**/api/moderation/moderators", async (route) => {
+    moderatorUpdate = route.request().method() === "POST";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        route.request().method() === "POST"
+          ? { message: "Updated" }
+          : { moderators: [] },
+      ),
     });
   });
   await page.goto("/moderate/");
@@ -383,4 +400,11 @@ test("ban controls are admin-only and require confirmation", async ({
     .fill("Repeated abusive submissions");
   await page.getByRole("button", { name: "Confirm abuse control" }).click();
   await expect.poll(() => banRequest).toBe(true);
+  await page.getByRole("button", { name: "Manage moderators" }).click();
+  await page
+    .getByRole("dialog", { name: "Manage moderators" })
+    .getByLabel("Auth user UUID")
+    .fill("33333333-3333-4333-8333-333333333333");
+  await page.getByRole("button", { name: "Save moderator profile" }).click();
+  await expect.poll(() => moderatorUpdate).toBe(true);
 });

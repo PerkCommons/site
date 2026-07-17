@@ -59,8 +59,8 @@ insert into public.moderator_profiles (user_id, role)
 values ('AUTH-USER-UUID', 'admin');
 ```
 
-Admins can use `POST /api/moderation/moderators` to add, deactivate, or change
-later moderator profiles. A normal authenticated Supabase account receives no
+Admins can use the moderation workspace or `POST /api/moderation/moderators` to
+add, deactivate, or change later moderator profiles. A normal authenticated Supabase account receives no
 moderation access without an active profile. Reviewers can decide, flag,
 unflag, annotate, undo, and resolve reports. Only admins can manage moderator
 profiles and bans.
@@ -162,6 +162,7 @@ POST /api/moderation/reports/:id/resolve
 Admin:
 
 ```text
+GET    /api/moderation/bans
 POST   /api/moderation/bans
 DELETE /api/moderation/bans/:id
 GET    /api/moderation/moderators

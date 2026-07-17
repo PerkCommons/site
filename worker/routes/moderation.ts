@@ -433,6 +433,15 @@ export async function createBan(request: Request, env: Env): Promise<Response> {
   return json({ message: "Abuse control created." }, 201);
 }
 
+export async function bans(request: Request, env: Env): Promise<Response> {
+  await requireModerator(request, env, "admin");
+  const { data } = await supabaseRequest<unknown[]>(
+    env,
+    "/rest/v1/moderation_bans?active=eq.true&select=id,identifier_type,display_hint,reason,mode,created_at,expires_at&order=created_at.desc&limit=100",
+  );
+  return json({ bans: data });
+}
+
 export async function removeBan(
   request: Request,
   env: Env,

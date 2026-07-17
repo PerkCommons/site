@@ -17,7 +17,6 @@ body { margin: 0; background: #fafbfc; color: #111827; font-family: var(--font-s
 a { text-underline-offset: 3px; }
 :focus-visible { outline: 3px solid #7467d6; outline-offset: 3px; }
 .container { width: min(1120px, calc(100% - 2rem)); margin-inline: auto; }
-.brand-mark { background: linear-gradient(90deg, #ee8293, #b279c3 52%, #7467d6); }
 .status-active { color: #176b43; background: #e7f6ee; }
 .status-limited, .status-waitlist { color: #825313; background: #fff4d6; }
 .status-unconfirmed, .status-disputed, .status-expired { color: #9b2c2c; background: #fdecec; }

@@ -13,7 +13,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#FAFBFC" />
-    <link rel="icon" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="/favicon.ico" sizes="32x32" />
     <link rel="canonical" href={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -27,8 +28,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <header class="border-b border-line bg-white">
       <div class="container flex min-h-16 items-center justify-between gap-4">
         <a href="/" class="flex items-center gap-2.5 no-underline" aria-label="PerkCommons home">
-          <span class="brand-mark grid size-8 place-items-center rounded-md text-sm font-bold text-white">P</span>
-          <span class="text-base font-semibold text-ink">PerkCommons</span>
+          <img src="/brand/wordmark.svg" alt="PerkCommons" width="174" height="35" class="h-8 w-auto sm:h-9" />
         </a>
         <nav class="hidden items-center gap-7 text-sm font-medium text-muted md:flex" aria-label="Primary navigation">
           <a href="/opportunities/" class="hover:text-ink">Browse</a>
@@ -46,7 +46,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <main id="main"><slot /></main>
     <footer class="mt-20 border-t border-line bg-white py-12 text-sm text-muted">
       <div class="container grid gap-8 md:grid-cols-[1.5fr_1fr_1fr]">
-        <div><p class="font-semibold text-ink">PerkCommons</p><p class="mt-2 max-w-md leading-6">An open, community-maintained index of credible opportunities. Free to browse and reuse.</p></div>
+        <div><img src="/brand/wordmark.svg" alt="PerkCommons" width="149" height="30" class="h-7 w-auto" /><p class="mt-3 max-w-md leading-6">An open, community-maintained index of credible opportunities. Free to browse and reuse.</p></div>
         <div><p class="font-semibold text-ink">Project</p><a class="mt-3 block" href="/about/">About</a><a class="mt-2 block" href="https://github.com/PerkCommons/docs">Policies</a><a class="mt-2 block" href="https://github.com/PerkCommons/data">Dataset</a></div>
         <div><p class="font-semibold text-ink">Participate</p><a class="mt-3 block" href="/submit/">Submit</a><a class="mt-2 block" href="https://github.com/PerkCommons/data/issues">Report a correction</a><a class="mt-2 block" href="mailto:security@perkcommons.org">Security</a></div>
       </div>

@@ -1,0 +1,787 @@
+---
+import {
+  Ban,
+  Check,
+  Clipboard,
+  ExternalLink,
+  Flag,
+  LogOut,
+  RefreshCw,
+  Search,
+  Undo2,
+  Users,
+  X,
+} from "lucide-astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { categories } from "../lib/listings";
+---
+
+<BaseLayout
+  title="Moderation - PerkCommons"
+  description="Private opportunity review workspace."
+  noindex
+>
+  <section
+    class="moderation-shell pb-[calc(7rem+env(safe-area-inset-bottom))] pt-5 sm:pt-8"
+  >
+    <div class="container">
+      <header class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase text-muted">
+            Moderator workspace
+          </p><h1 class="mt-1 text-2xl font-semibold">Opportunity review</h1>
+        </div>
+        <div class="flex gap-2">
+          <button
+            id="refresh-queue"
+            type="button"
+            class="grid size-11 place-items-center rounded-md border border-line bg-white"
+            aria-label="Refresh queue"
+            title="Refresh queue"><RefreshCw size={18} /></button
+          >
+          <button
+            id="logout-button"
+            type="button"
+            class="grid size-11 place-items-center rounded-md border border-line bg-white"
+            aria-label="Sign out"
+            title="Sign out"><LogOut size={18} /></button
+          >
+        </div>
+      </header>
+
+      <nav
+        class="-mx-4 mt-6 overflow-x-auto px-4"
+        aria-label="Moderation queues"
+      >
+        <div id="queue-tabs" class="flex min-w-max gap-1 border-b border-line">
+          {
+            [
+              ["pending", "Pending"],
+              ["flagged", "Flagged"],
+              ["approved", "Approved"],
+              ["rejected", "Rejected"],
+              ["published", "Published"],
+              ["reports", "Reports"],
+            ].map(([value, label]) => (
+              <button
+                type="button"
+                data-queue={value}
+                class="queue-tab min-h-11 border-b-2 border-transparent px-4 text-sm font-medium text-muted"
+                aria-selected="false"
+              >
+                {label}
+              </button>
+            ))
+          }
+        </div>
+      </nav>
+
+      <div class="mt-5 flex items-center justify-between gap-3 text-sm">
+        <p>
+          <strong id="queue-name">Pending</strong>
+          <span id="queue-count" class="text-muted">0 submissions</span>
+        </p>
+        <p id="queue-position" class="text-muted"></p>
+      </div>
+
+      <div
+        id="queue-state"
+        class="mt-5 rounded-md border border-line bg-white p-8 text-center text-muted"
+        role="status"
+      >
+        Loading submissions...
+      </div>
+
+      <div
+        id="review-workspace"
+        class="mt-5 hidden lg:grid lg:grid-cols-[minmax(0,760px)_260px] lg:items-start lg:gap-6"
+      >
+        <article
+          id="review-card"
+          class="review-card relative overflow-hidden rounded-md border border-line bg-white shadow-sm"
+          aria-labelledby="submission-title"
+          tabindex="-1"
+        >
+          <div
+            id="swipe-overlay"
+            class="pointer-events-none absolute inset-0 z-10 hidden place-items-center bg-white/90 text-2xl font-bold"
+            aria-hidden="true"
+          >
+          </div>
+          <header class="border-b border-line p-5 sm:p-7">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <p
+                  id="submission-organization"
+                  class="text-sm font-medium text-muted"
+                >
+                </p>
+                <h2
+                  id="submission-title"
+                  class="mt-1 text-2xl font-semibold leading-tight sm:text-3xl"
+                >
+                </h2>
+              </div>
+              <span
+                id="submission-status"
+                class="shrink-0 rounded bg-soft px-2 py-1 text-xs font-semibold"
+              ></span>
+            </div>
+            <div
+              class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted"
+            >
+              <span id="submission-age"></span><span aria-hidden="true">·</span>
+              <button
+                id="country-trigger"
+                type="button"
+                class="min-h-11 rounded px-1"
+                aria-describedby="country-tooltip"></button>
+              <span id="submission-location"></span><span
+                id="submission-deadline"></span>
+            </div>
+            <div id="submission-categories" class="mt-3 flex flex-wrap gap-2">
+            </div>
+            <p
+              id="submission-warning"
+              class="mt-3 hidden rounded bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            >
+            </p>
+          </header>
+
+          <div class="space-y-0 p-5 sm:p-7">
+            <section data-swipe-ignore class="pb-6">
+              <h3 class="text-sm font-semibold">Description</h3><p
+                id="submission-description"
+                class="mt-2 whitespace-pre-wrap leading-7 text-muted"
+              >
+              </p>
+            </section>
+            <section data-swipe-ignore class="border-t border-line py-6">
+              <h3 class="text-sm font-semibold">Eligibility</h3><p
+                id="submission-eligibility"
+                class="mt-2 whitespace-pre-wrap leading-7 text-muted"
+              >
+              </p>
+            </section>
+            <section data-swipe-ignore class="border-t border-line py-6">
+              <h3 class="text-sm font-semibold">Benefits</h3><p
+                id="submission-benefits"
+                class="mt-2 whitespace-pre-wrap leading-7 text-muted"
+              >
+              </p>
+            </section>
+            <section data-swipe-ignore class="border-t border-line py-6">
+              <h3 class="text-sm font-semibold">Sources</h3><dl
+                class="mt-3 space-y-3 text-sm"
+              >
+                <div>
+                  <dt class="text-muted">Official source</dt><dd
+                    class="mt-1 break-all"
+                  >
+                    <a
+                      id="source-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="font-medium"></a>
+                  </dd>
+                </div><div>
+                  <dt class="text-muted">Organization website</dt><dd
+                    class="mt-1 break-all"
+                  >
+                    <a
+                      id="website-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="font-medium"></a>
+                  </dd>
+                </div>
+              </dl>
+            </section>
+            <details data-swipe-ignore class="border-t border-line py-6">
+              <summary class="min-h-11 cursor-pointer font-semibold"
+                >Submitter and moderation details</summary
+              ><dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+                <div>
+                  <dt class="text-muted">Submitter</dt><dd
+                    id="submitter-name"
+                    class="mt-1"
+                  >
+                  </dd>
+                </div><div>
+                  <dt class="text-muted">Email</dt><dd
+                    id="submitter-email"
+                    class="mt-1 break-all"
+                  >
+                  </dd>
+                </div><div class="sm:col-span-2">
+                  <dt class="text-muted">Notes</dt><dd
+                    id="submitter-notes"
+                    class="mt-1 whitespace-pre-wrap"
+                  >
+                  </dd>
+                </div><div>
+                  <dt class="text-muted">Risk score</dt><dd
+                    id="risk-score"
+                    class="mt-1"
+                  >
+                  </dd>
+                </div><div>
+                  <dt class="text-muted">Flags</dt><dd
+                    id="flag-count"
+                    class="mt-1"
+                  >
+                  </dd>
+                </div>
+              </dl>
+            </details>
+            <details data-swipe-ignore class="border-t border-line py-6">
+              <summary class="min-h-11 cursor-pointer font-semibold"
+                >Flags and previous actions</summary
+              ><div id="history-list" class="mt-4 space-y-3 text-sm text-muted">
+              </div>
+            </details>
+          </div>
+
+          <div class="border-t border-line p-4">
+            <button
+              id="research-menu-button"
+              type="button"
+              class="mb-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-line font-medium lg:hidden"
+              ><Search size={17} /> Research actions</button
+            >
+            <div
+              class="flex gap-2 overflow-x-auto pb-1"
+              aria-label="Research actions"
+            >
+              <a
+                id="open-source"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border border-line px-3 text-sm no-underline"
+                ><ExternalLink size={16} /> Official source</a
+              >
+              <a
+                id="search-title"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border border-line px-3 text-sm no-underline"
+                ><Search size={16} /> Search title</a
+              >
+              <a
+                id="search-organization"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border border-line px-3 text-sm no-underline"
+                ><Search size={16} /> Search provider</a
+              >
+              <a
+                id="search-domain"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border border-line px-3 text-sm no-underline"
+                ><Search size={16} /> Search domain</a
+              >
+              <a
+                id="check-duplicates"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border border-line px-3 text-sm no-underline"
+                ><Search size={16} /> Check PerkCommons duplicates</a
+              >
+              <button
+                id="copy-domain"
+                type="button"
+                class="min-h-11 shrink-0 rounded-md border border-line px-3 text-sm"
+                >Copy domain</button
+              >
+              <button
+                id="copy-source"
+                type="button"
+                class="min-h-11 shrink-0 rounded-md border border-line px-3 text-sm"
+                >Copy URL</button
+              >
+            </div>
+          </div>
+        </article>
+
+        <aside class="mt-5 space-y-3 lg:mt-0" aria-label="Review tools">
+          <button
+            id="copy-menu-button"
+            type="button"
+            class="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-ink px-4 font-medium text-white"
+            aria-keyshortcuts="C"
+            ><Clipboard size={18} /> Copy review brief</button
+          >
+          <button
+            id="resolve-flags-button"
+            type="button"
+            class="hidden min-h-11 w-full items-center justify-center gap-2 rounded-md border border-line bg-white px-4 font-medium"
+            ><Check size={18} /> Resolve active flags</button
+          >
+          <button
+            id="ban-button"
+            type="button"
+            class="admin-only hidden min-h-11 w-full items-center justify-center gap-2 rounded-md border border-red-300 bg-white px-4 font-medium text-red-700"
+            ><Ban size={18} /> Abuse controls</button
+          >
+          <button
+            id="moderators-button"
+            type="button"
+            class="admin-only hidden min-h-11 w-full items-center justify-center gap-2 rounded-md border border-line bg-white px-4 font-medium"
+            ><Users size={18} /> Manage moderators</button
+          >
+          <div class="rounded-md border border-line bg-white p-4 text-sm">
+            <h3 class="font-semibold">Queue context</h3><p
+              class="mt-2 leading-6 text-muted"
+            >
+              Country, email, IP, and automated scores are weak signals. Verify
+              the opportunity itself before deciding.
+            </p>
+          </div>
+        </aside>
+      </div>
+
+      <section
+        id="reports-view"
+        class="mt-5 hidden"
+        aria-labelledby="reports-heading"
+      >
+        <h2 id="reports-heading" class="sr-only">Listing reports</h2><div
+          id="reports-list"
+          class="space-y-3"
+        >
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <div
+    id="review-actions"
+    class="fixed inset-x-0 bottom-0 z-20 hidden border-t border-line bg-white/95 px-4 pb-[calc(.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur"
+  >
+    <div class="mx-auto grid max-w-xl grid-cols-3 gap-3">
+      <button
+        id="decline-button"
+        type="button"
+        class="flex min-h-12 items-center justify-center gap-2 rounded-md border border-red-300 font-semibold text-red-700"
+        aria-keyshortcuts="ArrowLeft D"><X size={20} /> Decline</button
+      >
+      <button
+        id="flag-button"
+        type="button"
+        class="flex min-h-12 items-center justify-center gap-2 rounded-md border border-amber-300 font-semibold text-amber-800"
+        aria-keyshortcuts="F"><Flag size={19} /> Flag</button
+      >
+      <button
+        id="approve-button"
+        type="button"
+        class="flex min-h-12 items-center justify-center gap-2 rounded-md bg-green-700 font-semibold text-white"
+        aria-keyshortcuts="ArrowRight A"><Check size={20} /> Approve</button
+      >
+    </div>
+  </div>
+
+  <div
+    id="country-tooltip"
+    role="tooltip"
+    class="pointer-events-none fixed z-50 hidden rounded bg-ink px-2 py-1 text-xs text-white"
+  >
+  </div>
+  <div id="announcer" class="sr-only" aria-live="assertive"></div>
+
+  <dialog
+    id="approve-dialog"
+    aria-labelledby="approve-heading"
+    class="moderation-dialog w-[min(680px,calc(100%-2rem))] rounded-md border-0 p-0 shadow-xl"
+  >
+    <form id="approve-form" class="max-h-[85vh] overflow-y-auto p-5 sm:p-7">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold" id="approve-heading">
+          Normalize approved listing
+        </h2><button
+          type="button"
+          data-close-dialog
+          class="grid size-11 place-items-center"
+          aria-label="Close"><X size={20} /></button>
+      </div>
+      <p class="mt-2 text-sm leading-6 text-muted">
+        Approval stores a separate public-ready copy. It does not publish
+        automatically.
+      </p>
+      <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <label class="sm:col-span-2"
+          ><span class="text-sm font-medium">Title</span><input
+            required
+            name="title"
+            maxlength="140"
+            class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          /></label
+        >
+        <label class="sm:col-span-2"
+          ><span class="text-sm font-medium">Organization</span><input
+            required
+            name="organization"
+            maxlength="100"
+            class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          /></label
+        >
+        <label
+          ><span class="text-sm font-medium">Category</span><select
+            required
+            name="category"
+            class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+            >{
+              Object.entries(categories).map(([value, label]) => (
+                <option value={value}>{label}</option>
+              ))
+            }</select
+          ></label
+        >
+        <label
+          ><span class="text-sm font-medium">Deadline</span><input
+            type="date"
+            name="deadline"
+            class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          /></label
+        >
+        <label class="sm:col-span-2"
+          ><span class="text-sm font-medium">Description</span><textarea
+            required
+            name="description"
+            rows="4"
+            class="mt-1 w-full rounded-md border border-line p-3"
+          ></textarea></label
+        >
+        <label class="sm:col-span-2"
+          ><span class="text-sm font-medium">Eligibility</span><textarea
+            required
+            name="eligibility"
+            rows="3"
+            class="mt-1 w-full rounded-md border border-line p-3"
+          ></textarea></label
+        >
+        <label class="sm:col-span-2"
+          ><span class="text-sm font-medium">Benefits</span><textarea
+            name="benefits"
+            rows="3"
+            class="mt-1 w-full rounded-md border border-line p-3"
+          ></textarea></label
+        >
+        <label
+          ><span class="text-sm font-medium">Location</span><input
+            name="location"
+            maxlength="120"
+            class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          /></label
+        >
+        <label
+          ><span class="text-sm font-medium">Official source</span><input
+            required
+            type="url"
+            name="source_url"
+            class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          /></label
+        >
+        <label class="sm:col-span-2"
+          ><span class="text-sm font-medium">Organization website</span><input
+            type="url"
+            name="organization_website_url"
+            class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          /></label
+        >
+      </div>
+      <button
+        type="submit"
+        class="mt-6 min-h-11 w-full rounded-md bg-green-700 px-4 font-semibold text-white"
+        >Approve and save</button
+      >
+    </form>
+  </dialog>
+
+  <dialog
+    id="decline-dialog"
+    aria-labelledby="decline-heading"
+    class="moderation-dialog w-[min(480px,calc(100%-2rem))] rounded-md border-0 p-0 shadow-xl"
+  >
+    <form id="decline-form" class="p-5 sm:p-7">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold" id="decline-heading">
+          Decline submission
+        </h2><button
+          type="button"
+          data-close-dialog
+          class="grid size-11 place-items-center"
+          aria-label="Close"><X size={20} /></button>
+      </div><label class="mt-5 block"
+        ><span class="text-sm font-medium">Reason</span><select
+          required
+          name="reason"
+          class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          >{
+            [
+              "Duplicate",
+              "Not a real opportunity",
+              "Insufficient evidence",
+              "Expired",
+              "Misleading information",
+              "Promotional spam",
+              "Ineligible content",
+              "Unsafe or suspicious",
+              "Other",
+            ].map((reason) => <option>{reason}</option>)
+          }</select
+        ></label
+      ><label class="mt-4 block"
+        ><span class="text-sm font-medium"
+          >Internal notes <span class="font-normal text-muted">(optional)</span
+          ></span
+        ><textarea
+          name="notes"
+          rows="3"
+          class="mt-1 w-full rounded-md border border-line p-3"
+        ></textarea></label
+      ><button
+        type="submit"
+        class="mt-5 min-h-11 w-full rounded-md bg-red-700 px-4 font-semibold text-white"
+        >Decline</button>
+    </form>
+  </dialog>
+
+  <dialog
+    id="flag-dialog"
+    aria-labelledby="flag-heading"
+    class="moderation-dialog w-[min(480px,calc(100%-2rem))] rounded-md border-0 p-0 shadow-xl"
+  >
+    <form id="flag-form" class="p-5 sm:p-7">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold" id="flag-heading">
+          Flag for review
+        </h2><button
+          type="button"
+          data-close-dialog
+          class="grid size-11 place-items-center"
+          aria-label="Close"><X size={20} /></button>
+      </div><label class="mt-5 block"
+        ><span class="text-sm font-medium">Reason</span><select
+          required
+          name="reason"
+          class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          >{
+            [
+              "Needs deeper verification",
+              "Possible scam",
+              "Broken source",
+              "Duplicate",
+              "Incorrect details",
+              "Privacy concern",
+              "Conflict of interest",
+              "Suspicious submitter",
+              "Requires second reviewer",
+              "Other",
+            ].map((reason) => <option>{reason}</option>)
+          }</select
+        ></label
+      ><label class="mt-4 block"
+        ><span class="text-sm font-medium"
+          >Internal notes <span class="font-normal text-muted">(optional)</span
+          ></span
+        ><textarea
+          name="notes"
+          rows="3"
+          class="mt-1 w-full rounded-md border border-line p-3"
+        ></textarea></label
+      ><button
+        type="submit"
+        class="mt-5 min-h-11 w-full rounded-md bg-amber-600 px-4 font-semibold text-white"
+        >Add flag</button>
+    </form>
+  </dialog>
+
+  <dialog
+    id="copy-dialog"
+    aria-labelledby="copy-heading"
+    class="moderation-dialog w-[min(460px,calc(100%-2rem))] rounded-md border-0 p-0 shadow-xl"
+  >
+    <div class="p-5 sm:p-7">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold" id="copy-heading">
+          Copy submission
+        </h2><button
+          type="button"
+          data-close-dialog
+          class="grid size-11 place-items-center"
+          aria-label="Close"><X size={20} /></button>
+      </div><p
+        class="mt-3 rounded bg-amber-50 p-3 text-sm leading-6 text-amber-950"
+      >
+        The full review brief includes private submitter and moderation
+        information. Do not paste it into an untrusted service.
+      </p><div class="mt-5 grid gap-3">
+        <button
+          type="button"
+          data-copy="review"
+          class="min-h-11 rounded-md bg-ink px-4 font-medium text-white"
+          >Copy review brief</button
+        ><button
+          type="button"
+          data-copy="redacted"
+          class="min-h-11 rounded-md border border-line px-4 font-medium"
+          >Copy redacted brief</button
+        ><button
+          type="button"
+          data-copy="publication"
+          class="min-h-11 rounded-md border border-line px-4 font-medium"
+          >Copy publication data</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog
+    id="research-dialog"
+    aria-labelledby="research-heading"
+    class="moderation-dialog mt-auto w-full max-w-none rounded-t-md border-0 p-0 shadow-xl sm:m-auto sm:w-[min(480px,calc(100%-2rem))] sm:rounded-md"
+  >
+    <div class="p-5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold" id="research-heading">
+          Research actions
+        </h2><button
+          type="button"
+          data-close-dialog
+          class="grid size-11 place-items-center"
+          aria-label="Close"><X size={20} /></button>
+      </div><div class="mt-4 grid gap-2">
+        <a
+          id="research-source"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex min-h-11 items-center gap-2 rounded-md border border-line px-4 no-underline"
+          ><ExternalLink size={17} /> Open official source</a
+        ><a
+          id="research-website"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex min-h-11 items-center gap-2 rounded-md border border-line px-4 no-underline"
+          ><ExternalLink size={17} /> Open organization website</a
+        ><a
+          id="research-title"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex min-h-11 items-center gap-2 rounded-md border border-line px-4 no-underline"
+          ><Search size={17} /> Search exact title</a
+        ><a
+          id="research-provider"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex min-h-11 items-center gap-2 rounded-md border border-line px-4 no-underline"
+          ><Search size={17} /> Search organization</a>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog
+    id="ban-dialog"
+    aria-labelledby="ban-heading"
+    class="moderation-dialog w-[min(500px,calc(100%-2rem))] rounded-md border-0 p-0 shadow-xl"
+  >
+    <form id="ban-form" class="p-5 sm:p-7">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold" id="ban-heading">
+          Abuse controls
+        </h2><button
+          type="button"
+          data-close-dialog
+          class="grid size-11 place-items-center"
+          aria-label="Close"><X size={20} /></button>
+      </div><p class="mt-2 text-sm leading-6 text-muted">
+        Shared networks, VPNs, and mobile addresses can cause false positives.
+        Confirm separately from the review decision.
+      </p><label class="mt-5 block"
+        ><span class="text-sm font-medium">Action</span><select
+          name="action"
+          class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          ><option value="reject">Reject only</option><option value="email"
+            >Ban email</option
+          ><option value="ip">Ban IP fingerprint</option><option value="both"
+            >Ban both email and IP</option
+          ><option value="flag">Flag future submissions</option><option
+            value="warn">Warn only</option
+          ></select
+        ></label
+      ><label class="mt-4 block"
+        ><span class="text-sm font-medium">Duration</span><select
+          name="duration_hours"
+          class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          ><option value="24">24 hours</option><option value="168"
+            >7 days</option
+          ><option value="720">30 days</option><option value=""
+            >Permanent</option
+          ><option value="custom">Custom expiry</option></select
+        ></label
+      ><label id="custom-expiry-label" class="mt-4 hidden"
+        ><span class="text-sm font-medium">Custom expiry</span><input
+          type="datetime-local"
+          name="custom_expiry"
+          class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+        /></label
+      ><label class="mt-4 block"
+        ><span class="text-sm font-medium">Reason</span><input
+          required
+          name="reason"
+          maxlength="300"
+          class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+        /></label
+      ><label class="mt-4 block"
+        ><span class="text-sm font-medium">Internal notes</span><textarea
+          name="notes"
+          rows="3"
+          class="mt-1 w-full rounded-md border border-line p-3"
+        ></textarea></label
+      ><button
+        type="submit"
+        class="mt-5 min-h-11 w-full rounded-md bg-red-700 px-4 font-semibold text-white"
+        >Confirm abuse control</button>
+      <section class="mt-6 border-t border-line pt-5" aria-labelledby="active-bans-heading">
+        <h3 id="active-bans-heading" class="font-semibold">Active abuse controls</h3>
+        <div id="ban-list" class="mt-3 space-y-2 text-sm text-muted"></div>
+      </section>
+    </form>
+  </dialog>
+
+  <dialog
+    id="moderators-dialog"
+    aria-labelledby="moderators-heading"
+    class="moderation-dialog w-[min(560px,calc(100%-2rem))] rounded-md border-0 p-0 shadow-xl"
+  >
+    <form id="moderators-form" class="p-5 sm:p-7">
+      <div class="flex items-center justify-between">
+        <h2 id="moderators-heading" class="text-xl font-semibold">Manage moderators</h2>
+        <button type="button" data-close-dialog class="grid size-11 place-items-center" aria-label="Close"><X size={20} /></button>
+      </div>
+      <p class="mt-2 text-sm leading-6 text-muted">Use the Supabase Auth user UUID. Authentication alone never grants moderator access.</p>
+      <label class="mt-5 block"><span class="text-sm font-medium">Auth user UUID</span><input required name="user_id" pattern="[0-9a-fA-F-]{36}" class="mt-1 min-h-11 w-full rounded-md border border-line px-3" /></label>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <label><span class="text-sm font-medium">Role</span><select name="role" class="mt-1 min-h-11 w-full rounded-md border border-line px-3"><option value="reviewer">Reviewer</option><option value="admin">Admin</option></select></label>
+        <label class="flex min-h-11 items-center gap-3 self-end"><input type="checkbox" name="active" checked class="size-4" /> Active access</label>
+      </div>
+      <button type="submit" class="mt-5 min-h-11 w-full rounded-md bg-ink px-4 font-semibold text-white">Save moderator profile</button>
+      <section class="mt-6 border-t border-line pt-5" aria-labelledby="moderator-list-heading"><h3 id="moderator-list-heading" class="font-semibold">Moderator profiles</h3><div id="moderator-list" class="mt-3 space-y-2 text-sm text-muted"></div></section>
+    </form>
+  </dialog>
+
+  <div
+    id="undo-snackbar"
+    class="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 hidden w-[min(420px,calc(100%-2rem))] -translate-x-1/2 items-center justify-between gap-4 rounded-md bg-ink px-4 py-3 text-sm text-white shadow-xl"
+    role="status"
+  >
+    <span id="undo-message"></span><button
+      id="undo-button"
+      type="button"
+      class="inline-flex min-h-11 items-center gap-2 px-2 font-semibold"
+      aria-keyshortcuts="Z"><Undo2 size={17} /> Undo</button>
+  </div>
+
+  <script>
+    import "../scripts/moderation";
+  </script>
+</BaseLayout>

@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { categories } from "../lib/listings";
+const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
 ---
 
 <BaseLayout
@@ -13,84 +14,246 @@ import { categories } from "../lib/listings";
       <h1 class="mt-2 text-4xl font-semibold">Submit an opportunity</h1>
       <p class="mt-4 leading-7 text-muted">
         Submissions are reviewed before publication. Cite an official source and
-        disclose any affiliation. Do not send confidential or personal information.
+        disclose any affiliation. Do not send confidential or personal
+        information.
       </p>
 
       <form id="submission-form" class="mt-10 space-y-6" novalidate>
         <div class="hidden" aria-hidden="true">
-          <label>Website <input name="website" tabindex="-1" autocomplete="off" /></label>
+          <label
+            >Website <input
+              name="website"
+              tabindex="-1"
+              autocomplete="off"
+            /></label
+          >
         </div>
 
         <label class="block">
-          <span class="text-sm font-medium">Provider <span aria-hidden="true">*</span></span>
-          <input required name="organization" maxlength="100" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" autocomplete="organization" />
+          <span class="text-sm font-medium"
+            >Provider <span aria-hidden="true">*</span></span
+          >
+          <input
+            required
+            name="organization"
+            maxlength="100"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+            autocomplete="organization"
+          />
         </label>
 
         <label class="block">
-          <span class="text-sm font-medium">Opportunity title <span aria-hidden="true">*</span></span>
-          <input required name="name" maxlength="140" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" />
+          <span class="text-sm font-medium"
+            >Opportunity title <span aria-hidden="true">*</span></span
+          >
+          <input
+            required
+            name="name"
+            maxlength="140"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+          />
         </label>
 
         <label class="block">
-          <span class="text-sm font-medium">Category <span aria-hidden="true">*</span></span>
-          <select required name="category" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3">
+          <span class="text-sm font-medium"
+            >Category <span aria-hidden="true">*</span></span
+          >
+          <select
+            required
+            name="category"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+          >
             <option value="">Choose a category</option>
-            {Object.entries(categories).map(([value, label]) => <option value={value}>{label}</option>)}
+            {
+              Object.entries(categories).map(([value, label]) => (
+                <option value={value}>{label}</option>
+              ))
+            }
           </select>
         </label>
 
         <label class="block">
-          <span class="text-sm font-medium">Official source URL <span aria-hidden="true">*</span></span>
-          <input required type="url" name="source_url" maxlength="500" placeholder="https://" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" />
+          <span class="text-sm font-medium"
+            >Official source URL <span aria-hidden="true">*</span></span
+          >
+          <input
+            required
+            type="url"
+            name="source_url"
+            maxlength="500"
+            placeholder="https://"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+          />
         </label>
 
         <label class="block">
-          <span class="text-sm font-medium">Description <span aria-hidden="true">*</span></span>
-          <textarea required name="description" minlength="30" maxlength="2000" rows="5" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"></textarea>
+          <span class="text-sm font-medium"
+            >Organization website <span class="font-normal text-muted"
+              >(optional)</span
+            ></span
+          >
+          <input
+            type="url"
+            name="organization_website_url"
+            maxlength="500"
+            placeholder="https://"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+          />
         </label>
 
         <label class="block">
-          <span class="text-sm font-medium">Eligibility <span aria-hidden="true">*</span></span>
-          <textarea required name="eligibility" minlength="20" maxlength="2000" rows="4" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"></textarea>
+          <span class="text-sm font-medium"
+            >Description <span aria-hidden="true">*</span></span
+          >
+          <textarea
+            required
+            name="description"
+            minlength="30"
+            maxlength="2000"
+            rows="5"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+          ></textarea>
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium"
+            >Eligibility <span aria-hidden="true">*</span></span
+          >
+          <textarea
+            required
+            name="eligibility"
+            minlength="20"
+            maxlength="2000"
+            rows="4"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+          ></textarea>
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium"
+            >Benefits <span class="font-normal text-muted">(optional)</span
+            ></span
+          >
+          <textarea
+            name="benefits"
+            maxlength="2000"
+            rows="4"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+          ></textarea>
         </label>
 
         <div class="grid gap-6 sm:grid-cols-2">
           <label class="block">
-            <span class="text-sm font-medium">Location <span class="font-normal text-muted">(optional)</span></span>
-            <input name="location" maxlength="120" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" placeholder="Global" />
+            <span class="text-sm font-medium"
+              >Location <span class="font-normal text-muted">(optional)</span
+              ></span
+            >
+            <input
+              name="location"
+              maxlength="120"
+              class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+              placeholder="Global"
+            />
           </label>
           <label class="block">
-            <span class="text-sm font-medium">Deadline <span class="font-normal text-muted">(optional)</span></span>
-            <input type="date" name="deadline" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" />
+            <span class="text-sm font-medium"
+              >Deadline <span class="font-normal text-muted">(optional)</span
+              ></span
+            >
+            <input
+              type="date"
+              name="deadline"
+              class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+            />
           </label>
         </div>
 
         <label class="block">
-          <span class="text-sm font-medium">Your name <span class="font-normal text-muted">(optional)</span></span>
-          <input name="submitter_name" maxlength="100" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" autocomplete="name" />
+          <span class="text-sm font-medium"
+            >Your name <span class="font-normal text-muted">(optional)</span
+            ></span
+          >
+          <input
+            name="submitter_name"
+            maxlength="100"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+            autocomplete="name"
+          />
         </label>
 
         <label class="block">
-          <span class="text-sm font-medium">Your email <span class="font-normal text-muted">(optional, never published)</span></span>
-          <input type="email" name="submitter_email" maxlength="254" class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3" autocomplete="email" />
+          <span class="text-sm font-medium"
+            >Your email <span class="font-normal text-muted"
+              >(optional, never published)</span
+            ></span
+          >
+          <input
+            type="email"
+            name="submitter_email"
+            maxlength="254"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+            autocomplete="email"
+          />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium"
+            >Notes for moderators <span class="font-normal text-muted"
+              >(optional)</span
+            ></span
+          >
+          <textarea
+            name="submitter_notes"
+            maxlength="1000"
+            rows="3"
+            class="mt-2 w-full rounded-md border border-line bg-white px-4 py-3"
+          ></textarea>
         </label>
 
         <label class="flex gap-3 text-sm leading-6">
-          <input required type="checkbox" name="affiliationConfirmed" value="true" class="mt-1 size-4" />
-          <span>I have disclosed my affiliation in the description, or I have no affiliation with this provider.</span>
+          <input
+            required
+            type="checkbox"
+            name="affiliationConfirmed"
+            value="true"
+            class="mt-1 size-4"
+          />
+          <span
+            >I have disclosed my affiliation in the description, or I have no
+            affiliation with this provider.</span
+          >
         </label>
 
-        <button type="submit" class="rounded-md bg-ink px-5 py-3 font-medium text-white disabled:cursor-wait disabled:opacity-60">
+        {
+          turnstileKey && (
+            <div class="cf-turnstile" data-sitekey={turnstileKey} />
+          )
+        }
+
+        <button
+          type="submit"
+          class="rounded-md bg-ink px-5 py-3 font-medium text-white disabled:cursor-wait disabled:opacity-60"
+        >
           Send for review
         </button>
-        <p id="form-status" class="text-sm" role="status" aria-live="polite"></p>
+        <p id="form-status" class="text-sm" role="status" aria-live="polite">
+        </p>
       </form>
     </div>
   </section>
 
-  <script>
-    import { supabase } from "../lib/supabase";
+  {
+    turnstileKey && (
+      <script
+        is:inline
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        async
+        defer
+      />
+    )
+  }
 
+  <script>
     const form = document.querySelector<HTMLFormElement>("#submission-form");
     const status = document.querySelector<HTMLElement>("#form-status");
 
@@ -101,7 +264,9 @@ import { categories } from "../lib/listings";
       const formData = new FormData(form);
       if (formData.get("website")) return;
 
-      const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
+      const button = form.querySelector<HTMLButtonElement>(
+        "button[type=submit]",
+      );
       if (button) button.disabled = true;
       if (status) status.textContent = "Sending...";
 
@@ -110,24 +275,43 @@ import { categories } from "../lib/listings";
         return value || null;
       };
 
-      const { error } = await supabase.from("opportunity_submissions").insert({
-        organization: String(formData.get("organization") ?? "").trim(),
-        name: String(formData.get("name") ?? "").trim(),
-        categories: [String(formData.get("category") ?? "")],
-        source_url: String(formData.get("source_url") ?? "").trim(),
-        description: String(formData.get("description") ?? "").trim(),
-        eligibility: String(formData.get("eligibility") ?? "").trim(),
-        location: optionalValue("location"),
-        deadline: optionalValue("deadline"),
-        submitter_name: optionalValue("submitter_name"),
-        submitter_email: optionalValue("submitter_email"),
-      });
-
-      if (error) {
-        if (status) status.textContent = "Submission failed. Please try again later.";
-      } else {
+      try {
+        const response = await fetch("/api/submissions", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            organization: String(formData.get("organization") ?? "").trim(),
+            name: String(formData.get("name") ?? "").trim(),
+            categories: [String(formData.get("category") ?? "")],
+            source_url: String(formData.get("source_url") ?? "").trim(),
+            organization_website_url: optionalValue("organization_website_url"),
+            description: String(formData.get("description") ?? "").trim(),
+            eligibility: String(formData.get("eligibility") ?? "").trim(),
+            benefits: optionalValue("benefits"),
+            location: optionalValue("location"),
+            deadline: optionalValue("deadline"),
+            submitter_name: optionalValue("submitter_name"),
+            submitter_email: optionalValue("submitter_email"),
+            submitter_notes: optionalValue("submitter_notes"),
+            affiliation_confirmed:
+              formData.get("affiliationConfirmed") === "true",
+            website: optionalValue("website"),
+            turnstile_token: optionalValue("cf-turnstile-response"),
+          }),
+        });
+        if (!response.ok) {
+          const payload = (await response.json()) as {
+            error?: { message?: string };
+          };
+          throw new Error(payload.error?.message ?? "Submission failed.");
+        }
         form.reset();
-        if (status) status.textContent = "Submitted. A moderator will review the evidence before publication.";
+        if (status)
+          status.textContent =
+            "Submitted. A moderator will review the evidence before publication.";
+      } catch {
+        if (status)
+          status.textContent = "Submission failed. Please try again later.";
       }
 
       if (button) button.disabled = false;

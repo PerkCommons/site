@@ -1,9 +1,9 @@
 # PerkCommons Site
 
-Static Astro frontend for the PerkCommons public index, deployed with Cloudflare
-Workers Static Assets. Published listing data is read from the separate `PerkCommons/data`
-repository at build time. Opportunity submissions are written directly to
-Supabase and remain unpublished until moderator review.
+Static Astro frontend and thin Cloudflare Worker API for the PerkCommons public
+index. Published listing data is read from the separate `PerkCommons/data`
+repository at build time. Private submission and moderation data stays in
+Supabase and is never included in static HTML or Pagefind.
 
 ## Local development
 
@@ -13,17 +13,42 @@ npm run fetch:data
 npm run dev
 ```
 
-Create `.env.local` before starting the site:
+Create `.env.local` from `.env.example` with the two `PUBLIC_` values for Astro.
+The public Supabase key is used only for moderator authentication; it has no
+direct access to moderation tables.
+
+To exercise Worker APIs locally, create an ignored `.dev.vars` containing the
+runtime variables from `.env.example`, then run:
 
 ```sh
-PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
+npm run dev:worker
 ```
 
-`npm run fetch:data` replaces `.data/` with a shallow clone of the public dataset.
-Production builds run this command automatically. To use an existing checkout
-instead, set `PERKCOMMONS_DATA_PATH=/path/to/listings` for commands that read the
-dataset.
+`npm run fetch:data` replaces `.data/` with a shallow clone of the public
+dataset. Production builds run it automatically. Set
+`PERKCOMMONS_DATA_PATH=/path/to/listings` to use another checkout.
+
+## Moderation
+
+The moderation architecture, migration procedure, role bootstrap, security
+model, privacy behavior, API routes, and operational checklist are documented
+in [docs/MODERATION.md](docs/MODERATION.md).
+
+Apply `supabase/migrations/202607170001_moderation_system.sql` before deploying
+the Worker changes. Until that migration and Worker secrets are configured,
+public submissions and moderation APIs will return a temporary service error.
+
+## Testing
+
+```sh
+npm run check
+npm test
+npm run build
+npm run test:browser
+```
+
+Browser tests mock Supabase and moderation APIs. They do not write to the
+production project.
 
 ## Deployment
 
@@ -33,14 +58,11 @@ Configure the Cloudflare Git integration with:
 - Deploy command: `npx wrangler deploy`
 - Root directory: `/`
 
-Set `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_PUBLISHABLE_KEY` as build
-variables in Cloudflare. Set the same names as GitHub Actions repository
-variables when using the included CI or manual deployment workflow. These are
-public browser credentials; never expose a Supabase secret or service-role key.
+Set `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_PUBLISHABLE_KEY` as Cloudflare
+build variables and GitHub Actions repository variables. Set Worker runtime
+values with `wrangler secret put`; never place the service-role key or
+fingerprinting secret in build variables or frontend code.
 
-The build fetches the public dataset, generates static HTML, and creates the
-Pagefind index. Wrangler deploys `dist/` using Workers Static Assets. For GitHub
-Actions deployment, configure `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` as secrets. Supabase Row Level Security must allow only
-the intended anonymous insert operation on `opportunity_submissions`; browser
-clients must not be able to read, update, or delete moderation records.
+Wrangler deploys `dist/` through Workers Static Assets and runs
+`worker/index.ts` first for `/api/*` and `/moderate/*`. The canonical public URL
+remains `https://perkcommons.com`.

@@ -1,25 +1,298 @@
 ---
-import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, Globe2, Tag } from "lucide-astro";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  CalendarDays,
+  CheckCircle2,
+  Flag,
+  Globe2,
+  Tag,
+  X,
+} from "lucide-astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { categories, formatDate, getListings, statusLabel, type Listing } from "../../lib/listings";
-export async function getStaticPaths() { return (await getListings()).map((listing) => ({ params: { id: listing.id }, props: { listing } })); }
+import {
+  categories,
+  formatDate,
+  getListings,
+  statusLabel,
+  type Listing,
+} from "../../lib/listings";
+export async function getStaticPaths() {
+  return (await getListings()).map((listing) => ({
+    params: { id: listing.id },
+    props: { listing },
+  }));
+}
 const { listing } = Astro.props as { listing: Listing };
+const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
 ---
-<BaseLayout title={`${listing.title} — PerkCommons`} description={listing.description}>
+
+<BaseLayout
+  title={`${listing.title} — PerkCommons`}
+  description={listing.description}
+>
   <article class="container py-12" data-pagefind-body>
-    <a href="/opportunities/" class="inline-flex items-center gap-2 text-sm text-muted"><ArrowLeft size={16} /> All opportunities</a>
+    <a
+      href="/opportunities/"
+      class="inline-flex items-center gap-2 text-sm text-muted"
+      ><ArrowLeft size={16} /> All opportunities</a
+    >
     <div class="mt-9 grid gap-12 lg:grid-cols-[1fr_320px]">
       <div>
-        <div class="flex flex-wrap gap-2 text-xs font-medium"><span class="rounded px-2 py-1 status-{listing.status}">{statusLabel(listing.status)}</span><span class="rounded bg-soft px-2 py-1 text-muted">{categories[listing.category]}</span>{listing.sponsor && <span class="rounded border border-line px-2 py-1">Sponsored placement</span>}</div>
-        <p class="mt-7 font-medium text-muted" data-pagefind-meta="provider">{listing.provider}</p><h1 class="mt-2 max-w-3xl text-4xl font-semibold leading-tight" data-pagefind-meta="title">{listing.title}</h1><p class="mt-6 max-w-3xl text-lg leading-8 text-muted">{listing.description}</p>
-        <section class="mt-10 border-t border-line pt-8"><h2 class="text-xl font-semibold">What you receive</h2><p class="mt-3 leading-7 text-muted">{listing.value}</p></section>
-        <section class="mt-8 border-t border-line pt-8"><h2 class="text-xl font-semibold">Eligibility</h2><p class="mt-3 leading-7 text-muted">{listing.eligibility}</p></section>
-        {listing.notes && <section class="mt-8 border-t border-line pt-8"><h2 class="text-xl font-semibold">Important notes</h2><p class="mt-3 leading-7 text-muted">{listing.notes}</p></section>}
-        <div class="mt-10 flex flex-wrap gap-3"><a href={listing.officialUrl} rel="noopener" class="inline-flex items-center gap-2 rounded-md bg-ink px-5 py-3 font-medium text-white no-underline">Visit official program <ArrowUpRight size={18} /></a><a href={listing.sourceUrl} rel="noopener" class="inline-flex items-center gap-2 rounded-md border border-line bg-white px-5 py-3 font-medium no-underline">Review source <ArrowUpRight size={18} /></a></div>
+        <div class="flex flex-wrap gap-2 text-xs font-medium">
+          <span class="rounded px-2 py-1 status-{listing.status}"
+            >{statusLabel(listing.status)}</span
+          ><span class="rounded bg-soft px-2 py-1 text-muted"
+            >{categories[listing.category]}</span
+          >{
+            listing.sponsor && (
+              <span class="rounded border border-line px-2 py-1">
+                Sponsored placement
+              </span>
+            )
+          }
+        </div>
+        <p class="mt-7 font-medium text-muted" data-pagefind-meta="provider">
+          {listing.provider}
+        </p><h1
+          class="mt-2 max-w-3xl text-4xl font-semibold leading-tight"
+          data-pagefind-meta="title"
+        >
+          {listing.title}
+        </h1><p class="mt-6 max-w-3xl text-lg leading-8 text-muted">
+          {listing.description}
+        </p>
+        <section class="mt-10 border-t border-line pt-8">
+          <h2 class="text-xl font-semibold">What you receive</h2><p
+            class="mt-3 leading-7 text-muted"
+          >
+            {listing.value}
+          </p>
+        </section>
+        <section class="mt-8 border-t border-line pt-8">
+          <h2 class="text-xl font-semibold">Eligibility</h2><p
+            class="mt-3 leading-7 text-muted"
+          >
+            {listing.eligibility}
+          </p>
+        </section>
+        {
+          listing.notes && (
+            <section class="mt-8 border-t border-line pt-8">
+              <>
+                <h2 class="text-xl font-semibold">Important notes</h2>
+                <p class="mt-3 leading-7 text-muted">{listing.notes}</p>
+              </>
+            </section>
+          )
+        }
+        <div class="mt-10 flex flex-wrap gap-3">
+          <a
+            href={listing.officialUrl}
+            rel="noopener"
+            class="inline-flex items-center gap-2 rounded-md bg-ink px-5 py-3 font-medium text-white no-underline"
+            >Visit official program <ArrowUpRight size={18} /></a
+          ><a
+            href={listing.sourceUrl}
+            rel="noopener"
+            class="inline-flex items-center gap-2 rounded-md border border-line bg-white px-5 py-3 font-medium no-underline"
+            >Review source <ArrowUpRight size={18} /></a>
+        </div>
       </div>
-      <aside class="h-fit border-t-2 border-ink bg-white p-6" aria-label="Listing transparency details">
-        <h2 class="font-semibold">Transparency</h2><dl class="mt-5 space-y-5 text-sm"><div><dt class="flex items-center gap-2 text-muted"><CheckCircle2 size={16} /> Review</dt><dd class="mt-1.5 font-medium">Source checked {formatDate(listing.reviewDate)}</dd></div><div><dt class="flex items-center gap-2 text-muted"><CalendarDays size={16} /> Status</dt><dd class="mt-1.5 font-medium">{statusLabel(listing.status)}</dd></div><div><dt class="flex items-center gap-2 text-muted"><Globe2 size={16} /> Region</dt><dd class="mt-1.5 font-medium">{listing.regions?.join(", ") ?? "See provider terms"}</dd></div><div><dt class="flex items-center gap-2 text-muted"><Tag size={16} /> Tags</dt><dd class="mt-2 flex flex-wrap gap-1.5">{listing.tags.map((tag) => <span class="rounded bg-soft px-2 py-1">{tag}</span>)}</dd></div></dl><p class="mt-6 border-t border-line pt-5 text-xs leading-5 text-muted">PerkCommons checks published evidence, not outcomes. Eligibility, availability, and terms remain controlled by the provider.</p><a href={`https://github.com/PerkCommons/data/issues/new?title=${encodeURIComponent(`[Correction] ${listing.id}`)}`} class="mt-5 block text-sm">Report a correction</a>
+      <aside
+        class="h-fit border-t-2 border-ink bg-white p-6"
+        aria-label="Listing transparency details"
+      >
+        <h2 class="font-semibold">Transparency</h2><dl
+          class="mt-5 space-y-5 text-sm"
+        >
+          <div>
+            <dt class="flex items-center gap-2 text-muted">
+              <CheckCircle2 size={16} /> Review
+            </dt><dd class="mt-1.5 font-medium">
+              Source checked {formatDate(listing.reviewDate)}
+            </dd>
+          </div><div>
+            <dt class="flex items-center gap-2 text-muted">
+              <CalendarDays size={16} /> Status
+            </dt><dd class="mt-1.5 font-medium">
+              {statusLabel(listing.status)}
+            </dd>
+          </div><div>
+            <dt class="flex items-center gap-2 text-muted">
+              <Globe2 size={16} /> Region
+            </dt><dd class="mt-1.5 font-medium">
+              {listing.regions?.join(", ") ?? "See provider terms"}
+            </dd>
+          </div><div>
+            <dt class="flex items-center gap-2 text-muted">
+              <Tag size={16} /> Tags
+            </dt><dd class="mt-2 flex flex-wrap gap-1.5">
+              {
+                listing.tags.map((tag) => (
+                  <span class="rounded bg-soft px-2 py-1">{tag}</span>
+                ))
+              }
+            </dd>
+          </div>
+        </dl><p
+          class="mt-6 border-t border-line pt-5 text-xs leading-5 text-muted"
+        >
+          PerkCommons checks published evidence, not outcomes. Eligibility,
+          availability, and terms remain controlled by the provider.
+        </p><button
+          id="report-listing"
+          type="button"
+          class="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-medium"
+          ><Flag size={16} /> Report this listing</button
+        >
       </aside>
     </div>
   </article>
+
+  <dialog
+    id="report-dialog"
+    aria-labelledby="report-heading"
+    class="moderation-dialog w-[min(480px,calc(100%-2rem))] rounded-md border-0 p-0 shadow-xl"
+  >
+    <form id="report-form" data-listing-id={listing.id} class="p-5 sm:p-7">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold" id="report-heading">
+          Report this listing
+        </h2><button
+          type="button"
+          id="close-report"
+          class="grid size-11 place-items-center"
+          aria-label="Close report form"><X size={20} /></button>
+      </div>
+      <p class="mt-2 text-sm leading-6 text-muted">
+        Reports are reviewed by moderators and never remove a listing
+        automatically.
+      </p>
+      <div class="hidden" aria-hidden="true">
+        <label
+          >Website <input
+            name="website"
+            tabindex="-1"
+            autocomplete="off"
+          /></label>
+      </div>
+      <label class="mt-5 block"
+        ><span class="text-sm font-medium">Reason</span><select
+          required
+          name="reason"
+          class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          >{
+            [
+              "Expired",
+              "Broken link",
+              "Incorrect information",
+              "Possible scam",
+              "Duplicate",
+              "Privacy concern",
+              "Other",
+            ].map((reason) => <option>{reason}</option>)
+          }</select
+        ></label
+      >
+      <label class="mt-4 block"
+        ><span class="text-sm font-medium"
+          >Details <span class="font-normal text-muted">(optional)</span></span
+        ><textarea
+          name="details"
+          maxlength="1500"
+          rows="4"
+          class="mt-1 w-full rounded-md border border-line p-3"
+        ></textarea></label
+      >
+      <label class="mt-4 block"
+        ><span class="text-sm font-medium"
+          >Email <span class="font-normal text-muted"
+            >(optional, never published)</span
+          ></span
+        ><input
+          type="email"
+          name="reporter_email"
+          maxlength="254"
+          class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+        /></label
+      >
+      {
+        turnstileKey && (
+          <div class="cf-turnstile mt-4" data-sitekey={turnstileKey} />
+        )
+      }
+      <button
+        type="submit"
+        class="mt-5 min-h-11 w-full rounded-md bg-ink px-4 font-semibold text-white"
+        >Send report</button
+      >
+      <p
+        id="report-status"
+        role="status"
+        aria-live="polite"
+        class="mt-3 text-sm text-muted"
+      >
+      </p>
+    </form>
+  </dialog>
+  {
+    turnstileKey && (
+      <script
+        is:inline
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        async
+        defer
+      />
+    )
+  }
+  <script>
+    const reportDialog =
+      document.querySelector<HTMLDialogElement>("#report-dialog");
+    const reportForm = document.querySelector<HTMLFormElement>("#report-form");
+    const reportStatus = document.querySelector<HTMLElement>("#report-status");
+    document
+      .querySelector("#report-listing")
+      ?.addEventListener("click", () => reportDialog?.showModal());
+    document
+      .querySelector("#close-report")
+      ?.addEventListener("click", () => reportDialog?.close());
+    reportDialog?.addEventListener("click", (event) => {
+      if (event.target === reportDialog) reportDialog.close();
+    });
+    reportForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!reportForm.reportValidity()) return;
+      const data = new FormData(reportForm);
+      const button = reportForm.querySelector<HTMLButtonElement>(
+        "button[type=submit]",
+      );
+      if (button) button.disabled = true;
+      if (reportStatus) reportStatus.textContent = "Sending...";
+      try {
+        const response = await fetch("/api/reports", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            listing_id: reportForm.dataset.listingId,
+            reason: data.get("reason"),
+            details: data.get("details"),
+            reporter_email: data.get("reporter_email"),
+            website: data.get("website"),
+            turnstile_token: data.get("cf-turnstile-response"),
+          }),
+        });
+        if (!response.ok) throw new Error("Report failed");
+        reportForm.reset();
+        if (reportStatus)
+          reportStatus.textContent = "Report received for moderator review.";
+      } catch {
+        if (reportStatus)
+          reportStatus.textContent =
+            "Report could not be sent. Please try again later.";
+      } finally {
+        if (button) button.disabled = false;
+      }
+    });
+  </script>
 </BaseLayout>

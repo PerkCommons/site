@@ -10,9 +10,9 @@
     "prebuild": "npm run fetch:data",
     "build": "astro check && astro build && pagefind --site dist",
     "preview": "astro preview",
-    "check": "astro check && tsc --noEmit && tsc -p worker/tsconfig.json --noEmit",
+    "check": "astro check && tsc --noEmit && tsc -p worker/tsconfig.json --noEmit && tsc -p worker/tests/tsconfig.json --noEmit",
     "test": "npm run check && npm run test:unit",
-    "test:unit": "tsx --test tests/unit/*.test.ts",
+    "test:unit": "tsx --test tests/unit/*.test.ts worker/tests/*.test.ts",
     "test:browser": "playwright test"
   },
   "dependencies": {

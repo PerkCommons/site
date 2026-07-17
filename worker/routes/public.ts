@@ -128,6 +128,9 @@ export async function handlePublicSubmission(
       name: input.name,
       categories: input.categories,
       source_url: input.source_url,
+      // Keep the legacy required column populated while existing deployments
+      // transition to organization_website_url.
+      website_url: input.organization_website_url ?? input.source_url,
       organization_website_url: input.organization_website_url,
       description: input.description,
       eligibility: input.eligibility,

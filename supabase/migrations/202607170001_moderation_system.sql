@@ -10,6 +10,25 @@ exception
   when undefined_object then null;
 end $$;
 
+-- The Worker is now the only submission writer. Remove legacy browser policies
+-- before changing status because PostgreSQL policies can depend on its type.
+do $$
+declare
+  policy_record record;
+begin
+  for policy_record in
+    select policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'opportunity_submissions'
+  loop
+    execute format(
+      'drop policy if exists %I on public.opportunity_submissions',
+      policy_record.policyname
+    );
+  end loop;
+end $$;
+
 alter table public.opportunity_submissions
   drop constraint if exists opportunity_submissions_status_check;
 alter table public.opportunity_submissions

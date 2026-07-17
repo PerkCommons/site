@@ -34,6 +34,8 @@ Alternatively, review and run
 `supabase/migrations/202607170001_moderation_system.sql` in the Supabase SQL
 editor. The migration:
 
+- removes legacy direct-browser submission policies before changing the status
+  column; the Worker API becomes the only submission writer;
 - extends `opportunity_submissions` with review, country, risk, and private
   fingerprint fields;
 - preserves original submitted fields and stores approved normalized data in

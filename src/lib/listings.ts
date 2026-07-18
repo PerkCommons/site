@@ -43,7 +43,7 @@ export async function getListings(): Promise<Listing[]> {
   if (cache) return cache;
   const directory = process.env.PERKCOMMONS_DATA_PATH
     ? resolve(process.env.PERKCOMMONS_DATA_PATH)
-    : resolve(process.cwd(), ".data/listings");
+    : resolve(process.cwd(), ".data/opportunities");
   const files = (await readdir(directory)).filter((file) => file.endsWith(".json") && !file.startsWith("_"));
   cache = await Promise.all(files.map(async (file) => JSON.parse(await readFile(resolve(directory, file), "utf8")) as Listing));
   return cache.sort((a, b) => b.reviewDate.localeCompare(a.reviewDate) || a.title.localeCompare(b.title));

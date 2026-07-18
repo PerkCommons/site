@@ -25,14 +25,14 @@ jobs:
           PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       - run: npm run build
         env:
-          PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/.data/listings
+          PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/.data/opportunities
           PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
         env:
-          PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/.data/listings
+          PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/.data/opportunities
           PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}

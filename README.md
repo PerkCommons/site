@@ -26,7 +26,8 @@ npm run dev:worker
 
 `npm run fetch:data` replaces `.data/` with a shallow clone of the public
 dataset. Production builds run it automatically. Set
-`PERKCOMMONS_DATA_PATH=/path/to/listings` to use another checkout.
+`PERKCOMMONS_DATA_PATH=/path/to/opportunities` to use another checkout. The
+path must point directly to the directory containing the opportunity JSON files.
 
 ## Moderation
 

@@ -7,10 +7,11 @@
     "dev": "astro dev",
     "dev:worker": "npm run build && wrangler dev",
     "fetch:data": "node scripts/fetch-data.mjs",
+    "sync:taxonomy": "node scripts/sync-taxonomy.mjs",
     "prebuild": "npm run fetch:data",
     "build": "astro check && astro build && pagefind --site dist",
     "preview": "astro preview",
-    "check": "astro check && tsc --noEmit && tsc -p worker/tsconfig.json --noEmit && tsc -p worker/tests/tsconfig.json --noEmit",
+    "check": "node scripts/sync-taxonomy.mjs --check && astro check && tsc --noEmit && tsc -p worker/tsconfig.json --noEmit && tsc -p worker/tests/tsconfig.json --noEmit",
     "test": "npm run check && npm run test:unit",
     "test:unit": "tsx --test tests/unit/*.test.ts worker/tests/*.test.ts",
     "test:browser": "playwright test"

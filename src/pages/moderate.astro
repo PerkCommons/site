@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { categories } from "../lib/listings";
+import { categoryDefinitions } from "../lib/taxonomy";
 ---
 
 <BaseLayout
@@ -75,6 +75,14 @@ import { categories } from "../lib/listings";
           }
         </div>
       </nav>
+
+      <label class="mt-5 block max-w-xs">
+        <span class="text-xs font-semibold uppercase text-muted">Filter queue by category</span>
+        <select id="moderation-category-filter" class="mt-2 min-h-11 w-full rounded-md border border-line bg-surface px-3 text-sm">
+          <option value="">All categories</option>
+          {categoryDefinitions.map((category) => <option value={category.id}>{category.label}</option>)}
+        </select>
+      </label>
 
       <div class="mt-5 flex items-center justify-between gap-3 text-sm">
         <p>
@@ -139,7 +147,10 @@ import { categories } from "../lib/listings";
               <span id="submission-location"></span><span
                 id="submission-deadline"></span>
             </div>
-            <div id="submission-categories" class="mt-3 flex flex-wrap gap-2">
+            <div class="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+              <div><p class="text-xs font-semibold uppercase text-muted">Primary category</p><p id="submission-primary-category" class="mt-1 font-medium"></p></div>
+              <div><p class="text-xs font-semibold uppercase text-muted">Subcategories</p><div id="submission-subcategories" class="mt-1 flex flex-wrap gap-1.5"></div></div>
+              <div><p class="text-xs font-semibold uppercase text-muted">Tags</p><div id="submission-tags" class="mt-1 flex flex-wrap gap-1.5"></div></div>
             </div>
             <p
               id="submission-warning"
@@ -426,13 +437,14 @@ import { categories } from "../lib/listings";
           /></label
         >
         <label
-          ><span class="text-sm font-medium">Category</span><select
+          ><span class="text-sm font-medium">Primary category</span><select
             required
-            name="category"
+            id="approval-category"
+            name="primary_category"
             class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
             >{
-              Object.entries(categories).map(([value, label]) => (
-                <option value={value}>{label}</option>
+              categoryDefinitions.map((category) => (
+                <option value={category.id}>{category.label}</option>
               ))
             }</select
           ></label
@@ -441,6 +453,29 @@ import { categories } from "../lib/listings";
           ><span class="text-sm font-medium">Deadline</span><input
             type="date"
             name="deadline"
+            class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
+          /></label
+        >
+        <fieldset class="sm:col-span-2">
+          <legend class="text-sm font-medium">Subcategories</legend>
+          <div class="mt-2">
+            {categoryDefinitions.map((category) => (
+              <div data-approval-subcategory-group={category.id} hidden class="grid gap-2 sm:grid-cols-2">
+                {category.subcategories.map((subcategory) => (
+                  <label class="flex min-h-11 items-center gap-3 rounded-md border border-line px-3 py-2 text-sm">
+                    <input type="checkbox" name="subcategories" value={subcategory.id} disabled />
+                    <span>{subcategory.label}</span>
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>
+        </fieldset>
+        <label class="sm:col-span-2"
+          ><span class="text-sm font-medium">Tags</span><input
+            name="tags"
+            maxlength="240"
+            placeholder="open-source, remote"
             class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
           /></label
         >

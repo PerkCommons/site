@@ -3,9 +3,14 @@ import {
   buildReviewBrief,
   countryFlag,
   countryName,
+  moderationCategory,
   type ModerationContext,
   type ModerationSubmission,
 } from "../lib/moderation";
+import {
+  categories,
+  subcategoryLabel,
+} from "../lib/taxonomy";
 
 type QueueName =
   "pending" | "flagged" | "approved" | "rejected" | "published" | "reports";
@@ -34,6 +39,8 @@ let moderatorRole: "reviewer" | "admin" = "reviewer";
 let undoTarget: string | null = null;
 let undoTimer: number | undefined;
 
+const categoryFilter = element<HTMLSelectElement>("#moderation-category-filter");
+
 const text = (selector: string, value: string | number | null | undefined) => {
   element(selector).textContent =
     value === null || value === undefined || value === ""
@@ -44,6 +51,21 @@ const current = (): ModerationSubmission | null =>
   submissions[position] ?? null;
 const titleCase = (value: string) =>
   value.charAt(0).toUpperCase() + value.slice(1);
+
+const renderPills = (selector: string, values: string[]) => {
+  const container = element(selector);
+  container.replaceChildren();
+  if (!values.length) {
+    container.textContent = "None";
+    return;
+  }
+  values.forEach((value) => {
+    const tag = document.createElement("span");
+    tag.className = "rounded bg-soft px-2 py-1 text-xs font-medium";
+    tag.textContent = value;
+    container.append(tag);
+  });
+};
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -221,6 +243,20 @@ function renderSubmission() {
   text("#risk-score", submission.risk_score);
   text("#flag-count", submission.flag_count);
   renderCountry(submission);
+  const primaryCategory = moderationCategory(submission);
+  text(
+    "#submission-primary-category",
+    primaryCategory ? categories[primaryCategory] : "Unknown category",
+  );
+  renderPills(
+    "#submission-subcategories",
+    primaryCategory
+      ? submission.subcategories.map((item) =>
+          subcategoryLabel(primaryCategory, item),
+        )
+      : submission.subcategories,
+  );
+  renderPills("#submission-tags", submission.tags);
   setLink("#source-link", submission.source_url);
   setLink("#website-link", submission.organization_website_url);
   element<HTMLAnchorElement>("#open-source").href = submission.source_url;
@@ -256,15 +292,6 @@ function renderSubmission() {
     element<HTMLAnchorElement>("#search-title").href;
   element<HTMLAnchorElement>("#research-provider").href =
     element<HTMLAnchorElement>("#search-organization").href;
-  const categoryList = element("#submission-categories");
-  categoryList.replaceChildren(
-    ...submission.categories.map((category) => {
-      const tag = document.createElement("span");
-      tag.className = "rounded bg-soft px-2 py-1 text-xs font-medium";
-      tag.textContent = category;
-      return tag;
-    }),
-  );
   const warning = element("#submission-warning");
   if (submission.flag_count > 0 || submission.risk_score > 0) {
     warning.textContent = `${submission.flag_count} active flag${submission.flag_count === 1 ? "" : "s"}; automated risk score ${submission.risk_score}. Treat these as review prompts, not proof.`;
@@ -351,6 +378,7 @@ async function loadQueue(queueName: QueueName = activeQueue) {
     queueName === "reports" ? "Loading reports..." : "Loading submissions...",
   );
   setQueueLabels(0);
+  categoryFilter.disabled = queueName === "reports";
   try {
     if (queueName === "reports") {
       const result = await api<{
@@ -364,7 +392,9 @@ async function loadQueue(queueName: QueueName = activeQueue) {
     const result = await api<{
       count: number;
       submissions: ModerationSubmission[];
-    }>(`/api/moderation/queue?status=${queueName}`);
+    }>(
+      `/api/moderation/queue?status=${queueName}${categoryFilter.value ? `&category=${encodeURIComponent(categoryFilter.value)}` : ""}`,
+    );
     submissions = result.submissions;
     renderSubmission();
   } catch (error) {
@@ -391,7 +421,10 @@ function populateApproval() {
   };
   assign("title", submission.name);
   assign("organization", submission.organization);
-  assign("category", submission.categories[0] ?? "");
+  const primaryCategory = moderationCategory(submission);
+  assign("primary_category", primaryCategory);
+  assign("tags", submission.tags.join(", "));
+  updateApprovalSubcategories(primaryCategory, submission.subcategories);
   assign("description", submission.description);
   assign("eligibility", submission.eligibility);
   assign("benefits", submission.benefits);
@@ -400,6 +433,24 @@ function populateApproval() {
   assign("source_url", submission.source_url);
   assign("organization_website_url", submission.organization_website_url);
   openDialog("#approve-dialog");
+}
+
+function updateApprovalSubcategories(
+  category: string | null,
+  selected: string[] = [],
+) {
+  document
+    .querySelectorAll<HTMLElement>("[data-approval-subcategory-group]")
+    .forEach((group) => {
+      const active = group.dataset.approvalSubcategoryGroup === category;
+      group.hidden = !active;
+      group
+        .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+        .forEach((input) => {
+          input.disabled = !active;
+          input.checked = active && selected.includes(input.value);
+        });
+    });
 }
 
 async function performAction(
@@ -567,6 +618,7 @@ element("#queue-tabs").addEventListener("click", (event) => {
   if (button?.dataset.queue) void loadQueue(button.dataset.queue as QueueName);
 });
 element("#refresh-queue").addEventListener("click", () => void loadQueue());
+categoryFilter.addEventListener("change", () => void loadQueue());
 element("#logout-button").addEventListener("click", async () => {
   await api("/api/auth/logout", { method: "POST", body: "{}" });
   location.assign("/moderator-login/");
@@ -613,11 +665,24 @@ element<HTMLFormElement>("#approve-form").addEventListener(
     const form = event.currentTarget as HTMLFormElement;
     if (!form.reportValidity()) return;
     const data = new FormData(form);
+    const tags = String(data.get("tags") ?? "")
+      .split(",")
+      .map((tag) =>
+        tag
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, ""),
+      )
+      .filter((tag, index, values) => tag && values.indexOf(tag) === index);
     void performAction("approve", {
       normalized: {
         title: data.get("title"),
         organization: data.get("organization"),
-        categories: [data.get("category")],
+        primary_category: data.get("primary_category"),
+        subcategories: data.getAll("subcategories").map(String),
+        tags,
+        categories: [data.get("primary_category")],
         description: data.get("description"),
         eligibility: data.get("eligibility"),
         benefits: data.get("benefits"),
@@ -628,6 +693,13 @@ element<HTMLFormElement>("#approve-form").addEventListener(
       },
     });
   },
+);
+element<HTMLSelectElement>("#approval-category").addEventListener(
+  "change",
+  (event) =>
+    updateApprovalSubcategories(
+      (event.currentTarget as HTMLSelectElement).value,
+    ),
 );
 element<HTMLFormElement>("#decline-form").addEventListener(
   "submit",

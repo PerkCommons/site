@@ -17,6 +17,7 @@ import {
   statusLabel,
   type Listing,
 } from "../../lib/listings";
+import { subcategoryLabel } from "../../lib/taxonomy";
 export async function getStaticPaths() {
   return (await getListings()).map((listing) => ({
     params: { id: listing.id },
@@ -42,8 +43,12 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
         <div class="flex flex-wrap gap-2 text-xs font-medium">
           <span class="rounded px-2 py-1 status-{listing.status}"
             >{statusLabel(listing.status)}</span
-          ><span class="rounded bg-soft px-2 py-1 text-muted"
-            >{categories[listing.category]}</span
+          ><a
+            href={`/categories/${listing.category}/`}
+            class="rounded bg-soft px-2 py-1 text-muted"
+            data-pagefind-filter="category"
+            data-pagefind-meta="category"
+            >{categories[listing.category]}</a
           >{
             listing.sponsor && (
               <span class="rounded border border-line px-2 py-1">
@@ -126,11 +131,21 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
             </dd>
           </div><div>
             <dt class="flex items-center gap-2 text-muted">
+              <Tag size={16} /> Subcategories
+            </dt><dd class="mt-2 flex flex-wrap gap-1.5">
+              {
+                listing.subcategories.length ? listing.subcategories.map((subcategory) => (
+                  <span class="rounded bg-soft px-2 py-1" data-pagefind-meta="subcategory">{subcategoryLabel(listing.category, subcategory)}</span>
+                )) : <span>None specified</span>
+              }
+            </dd>
+          </div><div>
+            <dt class="flex items-center gap-2 text-muted">
               <Tag size={16} /> Tags
             </dt><dd class="mt-2 flex flex-wrap gap-1.5">
               {
                 listing.tags.map((tag) => (
-                  <span class="rounded bg-soft px-2 py-1">{tag}</span>
+                  <span class="rounded bg-soft px-2 py-1" data-pagefind-meta="tag">{tag}</span>
                 ))
               }
             </dd>

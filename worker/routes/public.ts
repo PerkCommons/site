@@ -127,6 +127,9 @@ export async function handlePublicSubmission(
       organization: input.organization,
       name: input.name,
       categories: input.categories,
+      primary_category: input.primary_category,
+      subcategories: input.subcategories,
+      tags: input.tags,
       source_url: input.source_url,
       // Keep the legacy required column populated while existing deployments
       // transition to organization_website_url.
@@ -162,7 +165,7 @@ export async function handlePublicSubmission(
     JSON.stringify({
       event: "submission_received",
       submissionId,
-      category: input.categories[0],
+      category: input.primary_category,
       country: signals.country,
     }),
   );

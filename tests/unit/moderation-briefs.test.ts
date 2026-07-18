@@ -12,7 +12,10 @@ const submission: ModerationSubmission = {
   id: "11111111-1111-4111-8111-111111111111",
   name: "Open Grant",
   organization: "Commons Org",
-  categories: ["grants"],
+  categories: ["funding"],
+  primary_category: "funding",
+  subcategories: ["research-funding"],
+  tags: ["open-source"],
   description: "A well documented grant.",
   eligibility: "Open maintainers may apply.",
   benefits: "$10,000",
@@ -45,6 +48,8 @@ test("review briefs include evidence and redacted briefs omit private identity",
   const redacted = buildReviewBrief(submission, {}, true);
   assert.match(full, /jane@example\.org/);
   assert.match(full, /Submission country: Poland \(PL\)/);
+  assert.match(full, /Primary category: Funding \(funding\)/);
+  assert.match(full, /Subcategories: Research funding/);
   assert.doesNotMatch(redacted, /jane@example\.org|I work for the provider/);
   assert.match(redacted, /Private submitter details redacted/);
 });
@@ -52,5 +57,6 @@ test("review briefs include evidence and redacted briefs omit private identity",
 test("publication copy contains only public listing fields", () => {
   const output = buildPublicationData(submission);
   assert.match(output, /provider: "Commons Org"/);
+  assert.match(output, /subcategories: \["research-funding"\]/);
   assert.doesNotMatch(output, /jane@example\.org|risk_score|submitter/);
 });

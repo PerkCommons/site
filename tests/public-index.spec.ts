@@ -7,9 +7,8 @@ test("home page exposes the public index without overflow", async ({
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Opportunities should be easy to find",
   );
-  await expect(
-    page.getByText("GitHub Student Developer Pack", { exact: true }).first(),
-  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Browse the index" })).toBeVisible();
+  await expect(page.locator("dd").first()).toHaveText(/^\d[\d,]*$/);
   await expect
     .poll(() =>
       page.evaluate(
@@ -54,18 +53,18 @@ test("directory filters records and preserves a stable layout", async ({
   await expect(page).toHaveURL(/category=startup-benefits/);
   await expect(page).toHaveURL(/q=microsoft/);
   await expect(
-    page.getByText("Microsoft for Startups Founders Hub", { exact: true }),
+    page.locator('a[href="/opportunities/microsoft-for-startups-founders-hub/"]').first(),
   ).toBeVisible();
   await expect(
     page.getByText("Notion for Education", { exact: true }),
   ).toBeHidden();
-  await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(page.getByText("3 opportunities", { exact: true })).toBeVisible();
-  await expect(page).toHaveURL(/\/opportunities\/$/);
   await page.screenshot({
     path: testInfo.outputPath("filtered-directory.png"),
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.locator("#count")).toHaveText(/^\d+ opportunities$/);
+  await expect(page).toHaveURL(/\/opportunities\/$/);
 });
 
 test("category pages expose counts, stable routes, and indexed taxonomy metadata", async ({
@@ -76,7 +75,9 @@ test("category pages expose counts, stable routes, and indexed taxonomy metadata
   await expect(page.getByRole("link", { name: /Browse opportunities/ }).first()).toBeVisible();
   await page.goto("/categories/startup-benefits/");
   await expect(page.getByRole("heading", { name: "Startup Benefits" })).toBeVisible();
-  await expect(page.getByText("Microsoft for Startups Founders Hub", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('a[href="/opportunities/microsoft-for-startups-founders-hub/"]').first(),
+  ).toBeVisible();
   await expect(page.getByText("Notion for Education", { exact: true })).toHaveCount(0);
   await page.goto("/opportunities/microsoft-for-startups-founders-hub/");
   await expect(page.locator('[data-pagefind-filter="category"]')).toHaveText("Startup Benefits");

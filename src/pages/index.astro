@@ -2,9 +2,13 @@
 import { ArrowRight, Database, ShieldCheck, Users } from "lucide-astro";
 import ListingCard from "../components/ListingCard.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { categories, getListings } from "../lib/listings";
+import { getListings } from "../lib/listings";
+import { categoryDefinitions } from "../lib/taxonomy";
 const listings = await getListings();
 const active = listings.filter((item) => !["expired", "disputed"].includes(item.status));
+const categoryCounts = new Map<string, number>();
+for (const listing of active) categoryCounts.set(listing.category, (categoryCounts.get(listing.category) ?? 0) + 1);
+const populatedCategories = categoryDefinitions.filter((category) => categoryCounts.has(category.id));
 ---
 <BaseLayout title="PerkCommons — Open opportunities for everyone" description="Discover credible credits, grants, programs, discounts, and benefits in a free, community-maintained public index.">
   <section class="border-b border-line bg-surface py-16 sm:py-20">
@@ -32,7 +36,7 @@ const active = listings.filter((item) => !["expired", "disputed"].includes(item.
   </section>
 
   <section class="border-y border-line bg-surface py-14">
-    <div class="container"><p class="text-sm font-semibold text-brand">Browse by category</p><div class="mt-6 flex flex-wrap gap-2">{Object.entries(categories).map(([slug, label]) => <a href={`/opportunities/?category=${slug}`} class="rounded-md border border-line bg-canvas px-4 py-2.5 text-sm no-underline hover:bg-soft">{label}</a>)}</div></div>
+    <div class="container"><div class="flex flex-wrap items-end justify-between gap-4"><p class="text-sm font-semibold text-brand">Browse by category</p><a href="/categories/" class="text-sm font-medium">View taxonomy</a></div><div class="mt-6 flex flex-wrap gap-2">{populatedCategories.map((category) => <a href={`/categories/${category.id}/`} class="rounded-md border border-line bg-canvas px-4 py-2.5 text-sm no-underline hover:bg-soft">{category.label} · {categoryCounts.get(category.id)}</a>)}</div></div>
   </section>
 
   <section class="container py-16">

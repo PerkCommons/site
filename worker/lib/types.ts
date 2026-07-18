@@ -29,6 +29,9 @@ export interface Moderator {
 export interface SubmissionInput {
   organization: string;
   name: string;
+  primary_category: string;
+  subcategories: string[];
+  tags: string[];
   categories: string[];
   source_url: string;
   organization_website_url: string | null;

@@ -5,7 +5,10 @@ const baseSubmission: ModerationSubmission = {
   id: "11111111-1111-4111-8111-111111111111",
   name: "Open Infrastructure Grant",
   organization: "Example Foundation",
-  categories: ["grants"],
+  categories: ["funding"],
+  primary_category: "funding",
+  subcategories: ["research-funding"],
+  tags: ["open-source", "remote"],
   description:
     "Funding for maintainers of open public infrastructure projects.\nEvidence is available on the official page.",
   eligibility: "Open-source maintainers worldwide may apply.",
@@ -187,6 +190,9 @@ test("pending card renders evidence, country tooltip, links, and copy controls",
   await expect(
     page.getByText("Funding for maintainers", { exact: false }),
   ).toBeVisible();
+  await expect(page.locator("#submission-primary-category")).toHaveText("Funding");
+  await expect(page.locator("#submission-subcategories")).toContainText("Research funding");
+  await expect(page.locator("#submission-tags")).toContainText("open-source");
   const country = page.getByRole("button", {
     name: "Submission country: Poland",
   });
@@ -206,6 +212,11 @@ test("pending card renders evidence, country tooltip, links, and copy controls",
   await expect(
     page.getByRole("button", { name: "Abuse controls" }),
   ).toBeHidden();
+  const filteredRequest = page.waitForRequest((request) =>
+    request.url().includes("category=funding"),
+  );
+  await page.getByLabel("Filter queue by category").selectOption("funding");
+  await filteredRequest;
   await page.getByRole("button", { name: "Copy review brief" }).click();
   await page
     .getByRole("dialog", { name: "Copy submission" })
@@ -257,8 +268,13 @@ test("approve, decline, flag, keyboard shortcuts, and undo use authenticated API
 }) => {
   await mockModeration(page);
   const actions: string[] = [];
+  let approval: Record<string, unknown> | undefined;
   await page.route("**/api/moderation/submissions/*/*", async (route) => {
-    actions.push(new URL(route.request().url()).pathname);
+    const path = new URL(route.request().url()).pathname;
+    actions.push(path);
+    if (path.endsWith("/approve")) {
+      approval = route.request().postDataJSON() as Record<string, unknown>;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -270,10 +286,24 @@ test("approve, decline, flag, keyboard shortcuts, and undo use authenticated API
   await expect(
     page.getByRole("dialog", { name: "Normalize approved listing" }),
   ).toBeVisible();
+  const approveDialog = page.getByRole("dialog", { name: "Normalize approved listing" });
+  await approveDialog.getByLabel("Primary category").selectOption("open-source");
+  await approveDialog
+    .locator('[data-approval-subcategory-group="open-source"]')
+    .getByLabel("Mentorship programs")
+    .check();
+  await approveDialog.getByLabel("Tags").fill("mentorship, contributors");
   await page.getByRole("button", { name: "Approve and save" }).click();
   await expect
     .poll(() => actions.some((path) => path.endsWith("/approve")))
     .toBe(true);
+  expect(approval).toMatchObject({
+    normalized: {
+      primary_category: "open-source",
+      subcategories: ["mentorship-programs"],
+      tags: ["mentorship", "contributors"],
+    },
+  });
   await page.getByRole("button", { name: "Undo" }).click();
   await expect
     .poll(() => actions.some((path) => path.endsWith("/undo")))

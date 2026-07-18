@@ -1,20 +1,12 @@
 import type { SubmissionInput } from "./types";
 import { RequestError } from "./http";
+import {
+  CATEGORY_IDS,
+  isSubcategoryFor,
+  normalizeCategoryId,
+} from "../../src/lib/taxonomy";
 
-export const ALLOWED_CATEGORIES = new Set([
-  "ai-credits",
-  "cloud-credits",
-  "startup-programs",
-  "grants",
-  "funding",
-  "discounts",
-  "nonprofit-benefits",
-  "student-benefits",
-  "developer-programs",
-  "accelerators",
-  "fellowships",
-  "business-perks",
-]);
+export const ALLOWED_CATEGORIES = new Set<string>(CATEGORY_IDS);
 
 const REPORT_REASONS = new Set([
   "Expired",
@@ -118,22 +110,40 @@ export const normalizeCountryCode = (value: unknown): string | null => {
 
 export function validateSubmission(value: unknown): SubmissionInput {
   const data = record(value);
-  const categories = Array.isArray(data.categories)
+  const legacyCategories = Array.isArray(data.categories)
     ? data.categories
-    : [data.category];
+    : [];
+  const primaryCategory = normalizeCategoryId(
+    data.primary_category ?? data.category ?? legacyCategories[0],
+  );
+  const subcategories = data.subcategories ?? [];
+  const tags = data.tags ?? [];
   if (
-    categories.length < 1 ||
-    categories.length > 3 ||
-    categories.some(
-      (category) =>
-        typeof category !== "string" || !ALLOWED_CATEGORIES.has(category),
-    )
+    !primaryCategory ||
+    !Array.isArray(subcategories) ||
+    subcategories.length > 8 ||
+    subcategories.some(
+      (subcategory) => !isSubcategoryFor(primaryCategory, subcategory),
+    ) ||
+    new Set(subcategories).size !== subcategories.length
   ) {
     throw new RequestError(
-      "Choose a valid category.",
+      "Choose a valid category and matching subcategories.",
       400,
       "validation_failed",
     );
+  }
+  if (
+    !Array.isArray(tags) ||
+    tags.length > 12 ||
+    tags.some(
+      (tag) =>
+        typeof tag !== "string" ||
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tag),
+    ) ||
+    new Set(tags).size !== tags.length
+  ) {
+    throw new RequestError("Tags are invalid.", 400, "validation_failed");
   }
   if (data.affiliation_confirmed !== true)
     throw new RequestError(
@@ -148,7 +158,10 @@ export function validateSubmission(value: unknown): SubmissionInput {
   return {
     organization: requiredText(data.organization, "Organization", 1, 100),
     name: requiredText(data.name, "Opportunity title", 1, 140),
-    categories: categories as string[],
+    primary_category: primaryCategory,
+    subcategories: subcategories as string[],
+    tags: tags as string[],
+    categories: [primaryCategory],
     source_url: safeHttpsUrl(data.source_url, "Official source") as string,
     organization_website_url: safeHttpsUrl(
       data.organization_website_url,

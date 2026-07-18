@@ -1,8 +1,18 @@
+import {
+  categories,
+  normalizeCategoryId,
+  subcategoryLabel,
+  type CategoryId,
+} from "./taxonomy";
+
 export interface ModerationSubmission {
   id: string;
   name: string;
   organization: string;
   categories: string[];
+  primary_category: string | null;
+  subcategories: string[];
+  tags: string[];
   description: string;
   eligibility: string;
   benefits: string | null;
@@ -71,12 +81,27 @@ const value = (input: string | null | undefined): string =>
 const list = (items: string[]): string =>
   items.length ? items.join(", ") : "Not provided";
 
+export function moderationCategory(
+  submission: ModerationSubmission,
+): CategoryId | null {
+  return normalizeCategoryId(
+    submission.primary_category ?? submission.categories[0],
+  );
+}
+
 export function buildReviewBrief(
   submission: ModerationSubmission,
   context: ModerationContext = {},
   redacted = false,
 ): string {
   const country = countryName(submission.submission_country_code);
+  const category = moderationCategory(submission);
+  const categoryText = category
+    ? `${categories[category]} (${category})`
+    : "Not provided";
+  const subcategoryText = category
+    ? submission.subcategories.map((item) => subcategoryLabel(category, item))
+    : submission.subcategories;
   const sourceDomain = (() => {
     try {
       return new URL(submission.source_url).hostname;
@@ -108,7 +133,9 @@ Submission country: ${country}${submission.submission_country_code ? ` (${submis
 ## Opportunity
 Name: ${submission.name}
 Organization: ${submission.organization}
-Categories: ${list(submission.categories)}
+Primary category: ${categoryText}
+Subcategories: ${list(subcategoryText)}
+Tags: ${list(submission.tags)}
 Location: ${value(submission.location)}
 Deadline: ${value(submission.deadline)}
 
@@ -144,11 +171,13 @@ missing information, risks, conflicts, or reasons it should not be published.`;
 }
 
 export function buildPublicationData(submission: ModerationSubmission): string {
+  const category = moderationCategory(submission);
   return `---
 title: ${JSON.stringify(submission.name)}
 provider: ${JSON.stringify(submission.organization)}
-category: ${JSON.stringify(submission.categories[0] ?? "")}
-tags: []
+category: ${JSON.stringify(category ?? "")}
+subcategories: ${JSON.stringify(submission.subcategories)}
+tags: ${JSON.stringify(submission.tags)}
 description: ${JSON.stringify(submission.description)}
 eligibility: ${JSON.stringify(submission.eligibility)}
 value: ${JSON.stringify(submission.benefits ?? "")}

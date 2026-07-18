@@ -1,29 +1,109 @@
 ---
 import ListingCard from "../../components/ListingCard.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { categories, getListings } from "../../lib/listings";
+import { getListings } from "../../lib/listings";
+import {
+  categories,
+  categoryDefinitions,
+  subcategoryLabel,
+} from "../../lib/taxonomy";
+
 const listings = await getListings();
 ---
-<BaseLayout title="Browse opportunities — PerkCommons" description="Browse the open PerkCommons index by category and status.">
+
+<BaseLayout
+  title="Browse opportunities — PerkCommons"
+  description="Browse the open PerkCommons index by category and status."
+>
   <section class="container py-14">
-    <p class="text-sm font-semibold text-brand">Public index</p><h1 class="mt-2 text-4xl font-semibold">All opportunities</h1><p class="mt-4 max-w-2xl leading-7 text-muted">Filter the complete published dataset. Expired records remain visible for transparency.</p>
-    <div class="mt-8 flex flex-col gap-4 border-y border-line py-5 sm:flex-row sm:items-center">
-      <label class="flex-1"><span class="sr-only">Filter listings by keyword</span><input id="filter" type="search" placeholder="Filter by title, provider, or tag" class="w-full rounded-md border border-line bg-surface px-4 py-3 text-sm" /></label>
-      <label><span class="sr-only">Filter by category</span><select id="category" class="w-full rounded-md border border-line bg-surface px-4 py-3 text-sm sm:w-56"><option value="">All categories</option>{Object.entries(categories).map(([value, label]) => <option value={value}>{label}</option>)}</select></label>
+    <p class="text-sm font-semibold text-brand">Public index</p>
+    <h1 class="mt-2 text-4xl font-semibold">All opportunities</h1>
+    <p class="mt-4 max-w-2xl leading-7 text-muted">
+      Filter the complete published dataset. Expired records remain visible for transparency.
+    </p>
+    <form id="directory-filters" role="search" class="mt-8 grid gap-3 border-y border-line py-5 sm:grid-cols-[1fr_260px_auto] sm:items-end">
+      <label>
+        <span class="text-sm font-medium">Search</span>
+        <input id="filter" name="q" type="search" placeholder="Title, provider, subcategory, or tag" class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3 text-sm" />
+      </label>
+      <label>
+        <span class="text-sm font-medium">Category</span>
+        <select id="category" name="category" class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3 text-sm">
+          <option value="">All categories</option>
+          {categoryDefinitions.map((category) => <option value={category.id}>{category.label}</option>)}
+        </select>
+      </label>
+      <button id="clear-filters" type="button" class="min-h-11 rounded-md border border-line bg-surface px-4 text-sm font-medium">Clear filters</button>
+    </form>
+    <div class="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
+      <p id="count" aria-live="polite">{listings.length} opportunities</p>
+      <a href="/categories/">Browse category descriptions</a>
     </div>
-    <p id="count" class="mt-6 text-sm text-muted" aria-live="polite">{listings.length} listings</p>
-    <div id="listing-grid" class="mt-2 grid gap-x-8 md:grid-cols-2 lg:grid-cols-3">{listings.map((listing) => <div data-search={`${listing.title} ${listing.provider} ${listing.tags.join(" ")}`.toLowerCase()} data-category={listing.category}><ListingCard listing={listing} /></div>)}</div>
-    <p id="empty" class="hidden py-16 text-center text-muted">No listings match these filters.</p>
+    <div id="listing-grid" class="mt-2 grid gap-x-8 md:grid-cols-2 lg:grid-cols-3">
+      {listings.map((listing) => {
+        const search = [
+          listing.title,
+          listing.provider,
+          categories[listing.category],
+          ...listing.subcategories.map((item) => subcategoryLabel(listing.category, item)),
+          ...listing.tags,
+        ].join(" ").toLowerCase();
+        return <div data-search={search} data-category={listing.category}><ListingCard listing={listing} /></div>;
+      })}
+    </div>
+    <div id="empty" class="hidden py-16 text-center">
+      <p class="font-medium">No opportunities match these filters.</p>
+      <p class="mt-2 text-sm text-muted">Clear the filters or browse a category to continue.</p>
+    </div>
   </section>
   <script>
+    const form = document.querySelector<HTMLFormElement>("#directory-filters");
     const input = document.querySelector<HTMLInputElement>("#filter");
     const select = document.querySelector<HTMLSelectElement>("#category");
+    const clear = document.querySelector<HTMLButtonElement>("#clear-filters");
     const cards = [...document.querySelectorAll<HTMLElement>("#listing-grid > div")];
     const count = document.querySelector<HTMLElement>("#count");
     const empty = document.querySelector<HTMLElement>("#empty");
     const params = new URLSearchParams(location.search);
-    if (select && params.get("category")) select.value = params.get("category") ?? "";
-    function update() { const query = input?.value.trim().toLowerCase() ?? ""; const category = select?.value ?? ""; let shown = 0; cards.forEach((card) => { const visible = (!query || card.dataset.search?.includes(query)) && (!category || card.dataset.category === category); card.hidden = !visible; if (visible) shown++; }); if (count) count.textContent = `${shown} ${shown === 1 ? "listing" : "listings"}`; empty?.classList.toggle("hidden", shown !== 0); }
-    input?.addEventListener("input", update); select?.addEventListener("change", update); update();
+
+    if (input) input.value = params.get("q") ?? "";
+    if (select && [...select.options].some((option) => option.value === params.get("category"))) {
+      select.value = params.get("category") ?? "";
+    }
+
+    function update(updateUrl = true) {
+      const query = input?.value.trim().toLowerCase() ?? "";
+      const category = select?.value ?? "";
+      let shown = 0;
+      cards.forEach((card) => {
+        const visible =
+          (!query || card.dataset.search?.includes(query)) &&
+          (!category || card.dataset.category === category);
+        card.hidden = !visible;
+        if (visible) shown += 1;
+      });
+      if (count) count.textContent = `${shown} ${shown === 1 ? "opportunity" : "opportunities"}`;
+      empty?.classList.toggle("hidden", shown !== 0);
+      if (updateUrl) {
+        const next = new URL(location.href);
+        query ? next.searchParams.set("q", query) : next.searchParams.delete("q");
+        category ? next.searchParams.set("category", category) : next.searchParams.delete("category");
+        history.replaceState(null, "", `${next.pathname}${next.search}`);
+      }
+    }
+
+    form?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      update();
+    });
+    input?.addEventListener("input", () => update());
+    select?.addEventListener("change", () => update());
+    clear?.addEventListener("click", () => {
+      if (input) input.value = "";
+      if (select) select.value = "";
+      update();
+      input?.focus();
+    });
+    update(false);
   </script>
 </BaseLayout>

@@ -28,6 +28,9 @@ npm run dev:worker
 dataset. Production builds run it automatically. Set
 `PERKCOMMONS_DATA_PATH=/path/to/opportunities` to use another checkout. The
 path must point directly to the directory containing the opportunity JSON files.
+The site bundles a generated taxonomy snapshot for Worker validation. After a
+taxonomy change, run `npm run sync:taxonomy`; `npm run check` verifies that the
+snapshot matches the canonical data repository.
 
 ## Moderation
 
@@ -35,9 +38,11 @@ The moderation architecture, migration procedure, role bootstrap, security
 model, privacy behavior, API routes, and operational checklist are documented
 in [docs/MODERATION.md](docs/MODERATION.md).
 
-Apply `supabase/migrations/202607170001_moderation_system.sql` before deploying
-the Worker changes. Until that migration and Worker secrets are configured,
-public submissions and moderation APIs will return a temporary service error.
+Apply Supabase migrations in filename order before deploying Worker changes.
+`202607180001_opportunity_taxonomy.sql` adds and backfills the primary category,
+subcategory, and tag fields required by the expanded taxonomy. Until required
+migrations and Worker secrets are configured, public submissions and moderation
+APIs will return a temporary service error.
 
 ## Testing
 

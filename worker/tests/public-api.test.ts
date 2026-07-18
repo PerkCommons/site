@@ -6,7 +6,9 @@ import type { Env } from "../lib/types";
 const submission = {
   organization: "Example Foundation",
   name: "Example opportunity",
-  categories: ["grants"],
+  primary_category: "funding",
+  subcategories: ["grants"],
+  tags: ["open-source"],
   source_url: "https://example.com/opportunity",
   organization_website_url: null,
   description: "A sufficiently detailed description for server validation.",
@@ -49,6 +51,8 @@ test("public submissions populate the required legacy website URL", async () => 
     if (call === 3) {
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       assert.equal(body.website_url, submission.source_url);
+      assert.equal(body.primary_category, "funding");
+      assert.deepEqual(body.subcategories, ["grants"]);
       return Response.json([{ id: "00000000-0000-4000-8000-000000000001" }]);
     }
     return Response.json([{}]);

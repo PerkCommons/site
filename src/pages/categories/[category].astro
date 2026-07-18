@@ -1,0 +1,40 @@
+---
+import { ArrowLeft } from "lucide-astro";
+import ListingCard from "../../components/ListingCard.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getListings, type Listing } from "../../lib/listings";
+import {
+  categoryDefinition,
+  type CategoryDefinition,
+} from "../../lib/taxonomy";
+
+export async function getStaticPaths() {
+  const listings = await getListings();
+  const populated = [...new Set(listings.map((listing) => listing.category))];
+  return populated.map((categoryId) => ({
+    params: { category: categoryId },
+    props: {
+      category: categoryDefinition(categoryId),
+      listings: listings.filter((listing) => listing.category === categoryId),
+    },
+  }));
+}
+
+const { category, listings } = Astro.props as {
+  category: CategoryDefinition;
+  listings: Listing[];
+};
+---
+
+<BaseLayout title={`${category.label} — PerkCommons`} description={category.description}>
+  <section class="container py-14">
+    <a href="/categories/" class="inline-flex min-h-11 items-center gap-2 text-sm text-muted"><ArrowLeft size={16} /> All categories</a>
+    <p class="mt-7 text-sm font-semibold text-brand">Opportunity category</p>
+    <h1 class="mt-2 text-4xl font-semibold">{category.label}</h1>
+    <p class="mt-4 max-w-2xl leading-7 text-muted">{category.description}</p>
+    <p class="mt-6 text-sm text-muted">{listings.length} {listings.length === 1 ? "opportunity" : "opportunities"}</p>
+    <div class="mt-2 grid gap-x-8 md:grid-cols-2 lg:grid-cols-3">
+      {listings.map((listing) => <ListingCard listing={listing} />)}
+    </div>
+  </section>
+</BaseLayout>

@@ -15,11 +15,14 @@ import {
 import { callRpc, insertRows, supabaseRequest } from "../lib/supabase";
 import type { Env, Moderator } from "../lib/types";
 import {
-  ALLOWED_CATEGORIES,
   optionalNote,
   requiredChoice,
   safeHttpsUrl,
 } from "../lib/validation";
+import {
+  isSubcategoryFor,
+  normalizeCategoryId,
+} from "../../src/lib/taxonomy";
 
 const DECLINE_REASONS = new Set([
   "Duplicate",
@@ -59,7 +62,7 @@ const asRecord = (value: unknown): Record<string, unknown> => {
 };
 
 const submissionSelect =
-  "id,name,organization,categories,description,eligibility,benefits,location,deadline,source_url,organization_website_url,submitter_name,submitter_email,submitter_notes,status,risk_score,flag_count,submission_country_code,created_at,updated_at,reviewed_at,published_at,last_action_at,decision_reason";
+  "id,name,organization,categories,primary_category,subcategories,tags,description,eligibility,benefits,location,deadline,source_url,organization_website_url,submitter_name,submitter_email,submitter_notes,status,risk_score,flag_count,submission_country_code,created_at,updated_at,reviewed_at,published_at,last_action_at,decision_reason";
 
 export async function createSession(
   request: Request,
@@ -102,9 +105,16 @@ export async function queue(request: Request, env: Env): Promise<Response> {
   await requireModerator(request, env);
   const url = new URL(request.url);
   const status = url.searchParams.get("status") ?? "pending";
+  const categoryParameter = url.searchParams.get("category");
+  const category = categoryParameter
+    ? normalizeCategoryId(categoryParameter)
+    : null;
   if (!QUEUES.has(status))
     throw new RequestError("Unknown moderation queue.", 400, "invalid_queue");
-  const query = `/rest/v1/opportunity_submissions?status=eq.${status}&select=${submissionSelect}&order=created_at.asc&limit=50`;
+  if (categoryParameter && !category)
+    throw new RequestError("Unknown opportunity category.", 400, "invalid_category");
+  const categoryFilter = category ? `&primary_category=eq.${category}` : "";
+  const query = `/rest/v1/opportunity_submissions?status=eq.${status}${categoryFilter}&select=${submissionSelect}&order=created_at.asc&limit=50`;
   const { data } = await supabaseRequest<unknown[]>(env, query);
   return json({ queue: status, count: data.length, submissions: data });
 }
@@ -169,19 +179,42 @@ const normalizedData = (value: unknown): Record<string, unknown> => {
       throw new RequestError(`${key} is invalid.`, 400, "validation_failed");
     return value.trim();
   };
+  const legacyCategories = Array.isArray(normalized.categories)
+    ? normalized.categories
+    : [];
+  const primaryCategory = normalizeCategoryId(
+    normalized.primary_category ?? legacyCategories[0],
+  );
+  const subcategories = normalized.subcategories ?? [];
+  const tags = normalized.tags ?? [];
   if (
-    !Array.isArray(normalized.categories) ||
-    normalized.categories.length === 0 ||
-    normalized.categories.some(
-      (item) => typeof item !== "string" || !ALLOWED_CATEGORIES.has(item),
-    )
-  ) {
-    throw new RequestError("Categories are invalid.", 400, "validation_failed");
-  }
+    !primaryCategory ||
+    !Array.isArray(subcategories) ||
+    subcategories.length > 8 ||
+    subcategories.some(
+      (subcategory) => !isSubcategoryFor(primaryCategory, subcategory),
+    ) ||
+    new Set(subcategories).size !== subcategories.length
+  )
+    throw new RequestError("Category selection is invalid.", 400, "validation_failed");
+  if (
+    !Array.isArray(tags) ||
+    tags.length > 12 ||
+    tags.some(
+      (tag) =>
+        typeof tag !== "string" ||
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tag),
+    ) ||
+    new Set(tags).size !== tags.length
+  )
+    throw new RequestError("Tags are invalid.", 400, "validation_failed");
   return {
     title: text("title", 140),
     organization: text("organization", 100),
-    categories: normalized.categories,
+    categories: [primaryCategory],
+    primary_category: primaryCategory,
+    subcategories,
+    tags,
     description: text("description", 2_000),
     eligibility: text("eligibility", 2_000),
     benefits: text("benefits", 2_000, false),

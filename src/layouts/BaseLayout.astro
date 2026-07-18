@@ -50,6 +50,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         </a>
         <nav class="hidden items-center gap-7 text-sm font-medium text-muted md:flex" aria-label="Primary navigation">
           <a href="/opportunities/" class="hover:text-ink">Browse</a>
+          <a href="/categories/" class="hover:text-ink">Categories</a>
           <a href="/about/" class="hover:text-ink">How it works</a>
           <a href="https://github.com/PerkCommons/data" class="hover:text-ink">Open data</a>
           <a href="https://github.com/PerkCommons" class="inline-flex items-center gap-1.5 hover:text-ink"><Github size={16} /> GitHub</a>
@@ -58,7 +59,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         <button id="menu-button" class="grid size-10 place-items-center rounded-md border border-line md:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><Menu id="menu-open" size={20} /><X id="menu-close" class="hidden" size={20} /></button>
       </div>
       <nav id="mobile-menu" class="container hidden border-t border-line py-3 md:hidden" aria-label="Mobile navigation">
-        <a class="block py-3" href="/opportunities/">Browse</a><a class="block py-3" href="/about/">How it works</a><a class="block py-3" href="https://github.com/PerkCommons/data">Open data</a><a class="block py-3" href="/submit/">Submit an opportunity</a>
+        <a class="block py-3" href="/opportunities/">Browse</a><a class="block py-3" href="/categories/">Categories</a><a class="block py-3" href="/about/">How it works</a><a class="block py-3" href="https://github.com/PerkCommons/data">Open data</a><a class="block py-3" href="/submit/">Submit an opportunity</a>
       </nav>
     </header>
     <main id="main"><slot /></main>

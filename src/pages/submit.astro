@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { categories } from "../lib/listings";
+import { categoryDefinitions } from "../lib/taxonomy";
 const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
 ---
 
@@ -56,20 +56,49 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
 
         <label class="block">
           <span class="text-sm font-medium"
-            >Category <span aria-hidden="true">*</span></span
+            >Primary category <span aria-hidden="true">*</span></span
           >
           <select
             required
-            name="category"
+            id="primary-category"
+            name="primary_category"
+            aria-describedby="category-help"
             class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
           >
             <option value="">Choose a category</option>
             {
-              Object.entries(categories).map(([value, label]) => (
-                <option value={value}>{label}</option>
+              categoryDefinitions.map((category) => (
+                <option value={category.id}>{category.label}</option>
               ))
             }
           </select>
+          <span id="category-help" class="mt-2 block text-sm leading-6 text-muted">
+            Choose what the opportunity is. Eligibility describes who can access it.
+          </span>
+        </label>
+
+        <fieldset>
+          <legend class="text-sm font-medium">Subcategories <span class="font-normal text-muted">(optional)</span></legend>
+          <p class="mt-1 text-sm leading-6 text-muted">Select the specific formats that apply. Tags remain separate discovery terms.</p>
+          <p id="subcategory-prompt" class="mt-3 rounded-md bg-soft px-4 py-3 text-sm text-muted">Choose a primary category first.</p>
+          <div id="subcategory-groups" class="mt-3">
+            {categoryDefinitions.map((category) => (
+              <div data-subcategory-group={category.id} hidden class="grid gap-2 sm:grid-cols-2">
+                {category.subcategories.map((subcategory) => (
+                  <label class="flex min-h-11 items-center gap-3 rounded-md border border-line bg-surface px-3 py-2 text-sm">
+                    <input type="checkbox" name="subcategories" value={subcategory.id} disabled />
+                    <span>{subcategory.label}</span>
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>
+        </fieldset>
+
+        <label class="block">
+          <span class="text-sm font-medium">Tags <span class="font-normal text-muted">(optional)</span></span>
+          <input name="tags" maxlength="240" placeholder="open-source, remote, climate" aria-describedby="tags-help" class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3" />
+          <span id="tags-help" class="mt-2 block text-sm leading-6 text-muted">Comma-separated discovery terms. Categories describe the opportunity itself.</span>
         </label>
 
         <label class="block">
@@ -256,6 +285,25 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
   <script>
     const form = document.querySelector<HTMLFormElement>("#submission-form");
     const status = document.querySelector<HTMLElement>("#form-status");
+    const categorySelect = document.querySelector<HTMLSelectElement>("#primary-category");
+    const subcategoryPrompt = document.querySelector<HTMLElement>("#subcategory-prompt");
+    const subcategoryGroups = [...document.querySelectorAll<HTMLElement>("[data-subcategory-group]")];
+
+    function updateSubcategories() {
+      const category = categorySelect?.value ?? "";
+      subcategoryGroups.forEach((group) => {
+        const active = group.dataset.subcategoryGroup === category;
+        group.hidden = !active;
+        group.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input) => {
+          input.disabled = !active;
+          if (!active) input.checked = false;
+        });
+      });
+      if (subcategoryPrompt) subcategoryPrompt.hidden = Boolean(category);
+    }
+
+    categorySelect?.addEventListener("change", updateSubcategories);
+    updateSubcategories();
 
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -274,6 +322,10 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
         const value = String(formData.get(name) ?? "").trim();
         return value || null;
       };
+      const tags = String(formData.get("tags") ?? "")
+        .split(",")
+        .map((tag) => tag.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""))
+        .filter((tag, index, values) => tag && values.indexOf(tag) === index);
 
       try {
         const response = await fetch("/api/submissions", {
@@ -282,7 +334,9 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
           body: JSON.stringify({
             organization: String(formData.get("organization") ?? "").trim(),
             name: String(formData.get("name") ?? "").trim(),
-            categories: [String(formData.get("category") ?? "")],
+            primary_category: String(formData.get("primary_category") ?? ""),
+            subcategories: formData.getAll("subcategories").map(String),
+            tags,
             source_url: String(formData.get("source_url") ?? "").trim(),
             organization_website_url: optionalValue("organization_website_url"),
             description: String(formData.get("description") ?? "").trim(),
@@ -306,6 +360,7 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
           throw new Error(payload.error?.message ?? "Submission failed.");
         }
         form.reset();
+        updateSubcategories();
         if (status)
           status.textContent =
             "Submitted. A moderator will review the evidence before publication.";

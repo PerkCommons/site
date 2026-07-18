@@ -7,9 +7,8 @@ test("home page exposes the public index without overflow", async ({
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "Opportunities should be easy to find",
   );
-  await expect(
-    page.getByText("GitHub Student Developer Pack", { exact: true }).first(),
-  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Browse the index" })).toBeVisible();
+  await expect(page.locator("dd").first()).toHaveText(/^\d[\d,]*$/);
   await expect
     .poll(() =>
       page.evaluate(
@@ -47,11 +46,14 @@ test("footer exposes the public contact channels", async ({ page }) => {
 test("directory filters records and preserves a stable layout", async ({
   page,
 }, testInfo) => {
-  await page.goto("/opportunities/");
-  await page.getByLabel("Filter listings by keyword").fill("Microsoft");
-  await expect(page.getByText("1 listing", { exact: true })).toBeVisible();
+  await page.goto("/opportunities/?category=startup-benefits");
+  await expect(page.getByLabel("Category")).toHaveValue("startup-benefits");
+  await page.getByRole("searchbox", { name: "Search" }).fill("Microsoft");
+  await expect(page.getByText("1 opportunity", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/category=startup-benefits/);
+  await expect(page).toHaveURL(/q=microsoft/);
   await expect(
-    page.getByText("Microsoft for Startups Founders Hub", { exact: true }),
+    page.locator('a[href="/opportunities/microsoft-for-startups-founders-hub/"]').first(),
   ).toBeVisible();
   await expect(
     page.getByText("Notion for Education", { exact: true }),
@@ -60,6 +62,27 @@ test("directory filters records and preserves a stable layout", async ({
     path: testInfo.outputPath("filtered-directory.png"),
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.locator("#count")).toHaveText(/^\d+ opportunities$/);
+  await expect(page).toHaveURL(/\/opportunities\/$/);
+});
+
+test("category pages expose counts, stable routes, and indexed taxonomy metadata", async ({
+  page,
+}) => {
+  await page.goto("/categories/");
+  await expect(page.getByRole("heading", { name: "Opportunity categories" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Browse opportunities/ }).first()).toBeVisible();
+  await page.goto("/categories/startup-benefits/");
+  await expect(page.getByRole("heading", { name: "Startup Benefits" })).toBeVisible();
+  await expect(
+    page.locator('a[href="/opportunities/microsoft-for-startups-founders-hub/"]').first(),
+  ).toBeVisible();
+  await expect(page.getByText("Notion for Education", { exact: true })).toHaveCount(0);
+  await page.goto("/opportunities/microsoft-for-startups-founders-hub/");
+  await expect(page.locator('[data-pagefind-filter="category"]')).toHaveText("Startup Benefits");
+  await expect(page.locator('[data-pagefind-meta="subcategory"]')).toContainText(["Cloud credits", "Developer tooling"]);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
 test("mobile navigation opens and remains keyboard accessible", async ({
@@ -155,7 +178,9 @@ test("submission form sends a reviewable opportunity through the Worker", async 
   await page
     .getByLabel("Opportunity title *")
     .fill("Open Infrastructure Grant");
-  await page.getByLabel("Category *").selectOption({ index: 1 });
+  await page.getByLabel("Primary category *").selectOption("funding");
+  await page.getByRole("checkbox", { name: "Grants", exact: true }).check();
+  await page.getByLabel("Tags (optional)").fill("open-source, remote");
   await page
     .getByLabel("Official source URL *")
     .fill("https://example.org/grant");
@@ -170,7 +195,7 @@ test("submission form sends a reviewable opportunity through the Worker", async 
   await page
     .getByLabel("Your email (optional, never published)")
     .fill("contributor@example.org");
-  await page.getByRole("checkbox").check();
+  await page.getByRole("checkbox", { name: /I have disclosed my/ }).check();
   await page.getByRole("button", { name: "Send for review" }).click();
 
   await expect(page.getByRole("status")).toHaveText(
@@ -183,7 +208,11 @@ test("submission form sends a reviewable opportunity through the Worker", async 
     location: "Global",
     submitter_email: "contributor@example.org",
   });
-  expect(submission?.categories).toHaveLength(1);
+  expect(submission).toMatchObject({
+    primary_category: "funding",
+    subcategories: ["grants"],
+    tags: ["open-source", "remote"],
+  });
 });
 
 test("published listings accept reports without changing listing visibility", async ({

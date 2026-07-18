@@ -51,6 +51,12 @@ Apply migrations in filename order. Migration
 `website_url` values into `organization_website_url` and removes the obsolete
 not-null requirement that predates the Worker submission API.
 
+Migration `202607180001_opportunity_taxonomy.sql` adds canonical
+`primary_category`, `subcategories`, and `tags` fields to submitted and
+normalized opportunities. It backfills recognized legacy categories and
+updates approval storage. Apply it before deploying a Worker that accepts the
+expanded taxonomy.
+
 Approval does not publish a listing. A later trusted integration can read
 `normalized_opportunities` and prepare a draft pull request for
 `PerkCommons/data`.

@@ -1,0 +1,52 @@
+---
+import { CalendarDays, ExternalLink, MapPin } from "lucide-astro";
+---
+
+<aside class="lg:sticky lg:top-6 lg:self-start" aria-labelledby="preview-heading">
+  <div class="overflow-hidden rounded-md border border-line bg-surface shadow-sm">
+    <div class="flex items-center justify-between gap-4 border-b border-line bg-soft px-5 py-3">
+      <h2 id="preview-heading" class="text-sm font-semibold text-ink">Live preview</h2>
+      <span class="rounded border border-line bg-surface px-2 py-1 text-xs font-medium text-muted">Draft</span>
+    </div>
+
+    <article class="min-w-0 overflow-hidden p-5 [overflow-wrap:anywhere] sm:p-6" aria-label="Opportunity submission preview">
+      <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
+        <span class="rounded bg-soft px-2 py-1 text-muted">Pending review</span>
+        <span id="preview-category" class="text-brand">Choose a category</span>
+      </div>
+
+      <p id="preview-provider" class="mt-6 text-sm font-medium text-muted">Provider name</p>
+      <h3 id="preview-title" class="mt-1 text-2xl font-semibold leading-8 text-ink">Opportunity title</h3>
+
+      <div id="preview-subcategories" class="mt-3 hidden flex-wrap gap-2" aria-label="Selected subcategories"></div>
+      <div id="preview-tags" class="mt-3 hidden flex-wrap gap-2" aria-label="Tags"></div>
+
+      <p id="preview-description" class="mt-6 whitespace-pre-line text-sm leading-6 text-muted">Your description will appear here.</p>
+
+      <div class="mt-6 border-t border-line pt-5">
+        <p class="text-xs font-semibold uppercase text-muted">Eligibility</p>
+        <p id="preview-eligibility" class="mt-2 whitespace-pre-line text-sm leading-6 text-ink">Who can access this opportunity?</p>
+      </div>
+
+      <div id="preview-benefits-section" class="mt-5 hidden border-t border-line pt-5">
+        <p class="text-xs font-semibold uppercase text-muted">Benefits</p>
+        <p id="preview-benefits" class="mt-2 whitespace-pre-line text-sm font-medium leading-6 text-ink"></p>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-line pt-5 text-xs text-muted">
+        <span class="inline-flex items-center gap-1.5"><MapPin size={15} aria-hidden="true" /><span id="preview-location">Global</span></span>
+        <span id="preview-deadline-wrap" class="hidden items-center gap-1.5"><CalendarDays size={15} aria-hidden="true" /><span id="preview-deadline"></span></span>
+      </div>
+
+      <div id="preview-source-wrap" class="mt-5 hidden border-t border-line pt-5">
+        <span class="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-ink">
+          <ExternalLink size={16} aria-hidden="true" />
+          <span>Official source</span>
+          <span aria-hidden="true">·</span>
+          <span id="preview-source-domain" class="max-w-48 truncate text-muted"></span>
+        </span>
+      </div>
+    </article>
+  </div>
+  <p class="mt-3 text-xs leading-5 text-muted">Private contributor details and moderator notes are never shown in the public preview.</p>
+</aside>

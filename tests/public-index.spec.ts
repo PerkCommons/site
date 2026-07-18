@@ -103,6 +103,27 @@ test("mobile navigation opens and remains keyboard accessible", async ({
       .getByRole("navigation", { name: "Mobile navigation" })
       .getByRole("link", { name: "Submit an opportunity" }),
   ).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Mobile navigation" })
+      .getByRole("link", { name: "Moderator sign in" }),
+  ).toHaveAttribute("href", "/moderator-login/");
+});
+
+test("primary navigation exposes moderator sign in", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "desktop",
+    "Desktop navigation is hidden at mobile widths.",
+  );
+  await page.goto("/");
+  const signIn = page
+    .getByRole("navigation", { name: "Primary navigation" })
+    .getByRole("link", { name: "Moderator sign in" });
+  await expect(signIn).toBeVisible();
+  await expect(signIn).toHaveAttribute("href", "/moderator-login/");
+  const bounds = await signIn.boundingBox();
+  expect(bounds?.width).toBeGreaterThanOrEqual(44);
+  expect(bounds?.height).toBeGreaterThanOrEqual(44);
 });
 
 test("theme switch follows the system, persists, and stays offset", async ({
@@ -161,7 +182,7 @@ test("theme changes respect reduced motion", async ({ page }) => {
 
 test("submission form sends a reviewable opportunity through the Worker", async ({
   page,
-}) => {
+}, testInfo) => {
   let submission: Record<string, unknown> | undefined;
 
   await page.route("**/api/submissions", async (route) => {
@@ -190,11 +211,32 @@ test("submission form sends a reviewable opportunity through the Worker", async 
   await page
     .getByLabel("Eligibility *")
     .fill("Open-source maintainers worldwide may apply.");
+  await page
+    .getByLabel("Benefits (optional)")
+    .fill("Up to $10,000 in project funding.");
   await page.getByLabel("Location (optional)").fill("Global");
+  await page.getByLabel("Deadline (optional)").fill("2026-12-01");
   await page.getByLabel("Your name (optional)").fill("Community Contributor");
   await page
     .getByLabel("Your email (optional, never published)")
     .fill("contributor@example.org");
+
+  const preview = page.getByRole("article", {
+    name: "Opportunity submission preview",
+  });
+  await expect(preview.getByText("Example Foundation", { exact: true })).toBeVisible();
+  await expect(preview.getByRole("heading", { name: "Open Infrastructure Grant" })).toBeVisible();
+  await expect(preview.getByText("Funding", { exact: true })).toBeVisible();
+  await expect(preview.getByText("Grants", { exact: true })).toBeVisible();
+  await expect(preview.getByText("#open-source", { exact: true })).toBeVisible();
+  await expect(preview.getByText("example.org", { exact: true })).toBeVisible();
+  await expect(preview.getByText("Dec 1, 2026", { exact: true })).toBeVisible();
+  await expect(preview).not.toContainText("contributor@example.org");
+  await page.screenshot({
+    path: testInfo.outputPath("submission-live-preview.png"),
+    fullPage: true,
+  });
+
   await page.getByRole("checkbox", { name: /I have disclosed my/ }).check();
   await page.getByRole("button", { name: "Send for review" }).click();
 
@@ -212,6 +254,45 @@ test("submission form sends a reviewable opportunity through the Worker", async 
     primary_category: "funding",
     subcategories: ["grants"],
     tags: ["open-source", "remote"],
+  });
+  await expect(preview.getByRole("heading", { name: "Opportunity title" })).toBeVisible();
+  await expect(preview.getByText("Provider name", { exact: true })).toBeVisible();
+});
+
+test("submission preview is safe, responsive, and visible on mobile", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "mobile",
+    "Mobile ordering is specific to the narrow layout.",
+  );
+  await page.goto("/submit/");
+  const preview = page.getByRole("article", {
+    name: "Opportunity submission preview",
+  });
+  await page
+    .getByLabel("Opportunity title *")
+    .fill('<img src=x onerror="document.body.dataset.injected=1"> Research Grant');
+  await expect(preview).toContainText('<img src=x onerror="document.body.dataset.injected=1"> Research Grant');
+  await expect(preview.locator("img")).toHaveCount(0);
+  await expect(page.locator("body")).not.toHaveAttribute("data-injected", "1");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    )
+    .toBe(true);
+  const previewBounds = await preview.boundingBox();
+  const formBounds = await page.locator("#submission-form").boundingBox();
+  expect(previewBounds).not.toBeNull();
+  expect(formBounds).not.toBeNull();
+  expect(previewBounds!.y).toBeLessThan(formBounds!.y);
+  await page.screenshot({
+    path: testInfo.outputPath("submission-live-preview-mobile.png"),
+    fullPage: true,
   });
 });
 

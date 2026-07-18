@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
 export const categories = {
@@ -41,9 +41,19 @@ let cache: Listing[] | undefined;
 
 export async function getListings(): Promise<Listing[]> {
   if (cache) return cache;
-  const directory = process.env.PERKCOMMONS_DATA_PATH
+  let directory = process.env.PERKCOMMONS_DATA_PATH
     ? resolve(process.env.PERKCOMMONS_DATA_PATH)
     : resolve(process.cwd(), ".data/opportunities");
+
+  if (!process.env.PERKCOMMONS_DATA_PATH) {
+    try {
+      await access(directory);
+    } catch {
+      // Keep previews deployable while downstream checkouts migrate to opportunities/.
+      directory = resolve(process.cwd(), ".data/listings");
+    }
+  }
+
   const files = (await readdir(directory)).filter((file) => file.endsWith(".json") && !file.startsWith("_"));
   cache = await Promise.all(files.map(async (file) => JSON.parse(await readFile(resolve(directory, file), "utf8")) as Listing));
   return cache.sort((a, b) => b.reviewDate.localeCompare(a.reviewDate) || a.title.localeCompare(b.title));

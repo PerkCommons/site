@@ -13,8 +13,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: PerkCommons/data
-          # Remove this stacked-PR pin after the data layout PR merges.
-          ref: refactor/rename-listings-to-opportunities
           path: .data
       - uses: actions/setup-node@v4
         with:
@@ -27,7 +25,6 @@ jobs:
           PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       - run: npm run build
         env:
-          PERKCOMMONS_DATA_REF: refactor/rename-listings-to-opportunities
           PERKCOMMONS_DATA_PATH: ${{ github.workspace }}/.data/opportunities
           PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}

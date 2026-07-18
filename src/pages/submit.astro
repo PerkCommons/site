@@ -1,286 +1,171 @@
 ---
+import { Send } from "lucide-astro";
+import SubmissionPreview from "../components/SubmissionPreview.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { categoryDefinitions } from "../lib/taxonomy";
+
 const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
+const fieldClass = "mt-2 min-h-12 w-full rounded-md border border-line bg-surface px-4 py-3";
+const textareaClass = `${fieldClass} resize-y`;
 ---
 
 <BaseLayout
   title="Submit an opportunity - PerkCommons"
   description="Propose a credible opportunity for community review and publication."
 >
-  <section class="container py-14">
-    <div class="max-w-2xl">
+  <section class="container py-10 sm:py-14">
+    <div class="max-w-3xl">
       <p class="text-sm font-semibold text-brand">Community contribution</p>
-      <h1 class="mt-2 text-4xl font-semibold">Submit an opportunity</h1>
-      <p class="mt-4 leading-7 text-muted">
-        Submissions are reviewed before publication. Cite an official source and
-        disclose any affiliation. Do not send confidential or personal
-        information.
+      <h1 class="mt-2 text-4xl font-semibold leading-tight">Submit an opportunity</h1>
+      <p class="mt-4 max-w-2xl leading-7 text-muted">
+        Share a legitimate program with the public index. Every submission is checked by a moderator before publication.
       </p>
+    </div>
 
-      <form id="submission-form" class="mt-10 space-y-6" novalidate>
+    <div class="mt-9 grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-14">
+      <SubmissionPreview />
+
+      <form id="submission-form" class="lg:order-first" novalidate>
         <div class="hidden" aria-hidden="true">
-          <label
-            >Website <input
-              name="website"
-              tabindex="-1"
-              autocomplete="off"
-            /></label
-          >
+          <label>Website <input name="website" tabindex="-1" autocomplete="off" /></label>
         </div>
 
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Provider <span aria-hidden="true">*</span></span
-          >
-          <input
-            required
-            name="organization"
-            maxlength="100"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-            autocomplete="organization"
-          />
-        </label>
+        <fieldset class="border-t border-line pt-7">
+          <legend class="pr-4 text-lg font-semibold text-ink">Opportunity</legend>
+          <p class="mt-1 text-sm leading-6 text-muted">Start with the public identity and the closest category.</p>
 
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Opportunity title <span aria-hidden="true">*</span></span
-          >
-          <input
-            required
-            name="name"
-            maxlength="140"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-          />
-        </label>
+          <div class="mt-6 grid gap-6 sm:grid-cols-2">
+            <label class="block">
+              <span class="text-sm font-medium">Provider <span aria-hidden="true">*</span></span>
+              <input required name="organization" maxlength="100" class={fieldClass} autocomplete="organization" placeholder="Organization or company" />
+            </label>
 
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Primary category <span aria-hidden="true">*</span></span
-          >
-          <select
-            required
-            id="primary-category"
-            name="primary_category"
-            aria-describedby="category-help"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-          >
-            <option value="">Choose a category</option>
-            {
-              categoryDefinitions.map((category) => (
-                <option value={category.id}>{category.label}</option>
-              ))
-            }
-          </select>
-          <span id="category-help" class="mt-2 block text-sm leading-6 text-muted">
-            Choose what the opportunity is. Eligibility describes who can access it.
-          </span>
-        </label>
+            <label class="block">
+              <span class="text-sm font-medium">Opportunity title <span aria-hidden="true">*</span></span>
+              <input required name="name" maxlength="140" class={fieldClass} placeholder="Official program name" />
+            </label>
+          </div>
 
-        <fieldset>
-          <legend class="text-sm font-medium">Subcategories <span class="font-normal text-muted">(optional)</span></legend>
-          <p class="mt-1 text-sm leading-6 text-muted">Select the specific formats that apply. Tags remain separate discovery terms.</p>
-          <p id="subcategory-prompt" class="mt-3 rounded-md bg-soft px-4 py-3 text-sm text-muted">Choose a primary category first.</p>
-          <div id="subcategory-groups" class="mt-3">
-            {categoryDefinitions.map((category) => (
-              <div data-subcategory-group={category.id} hidden class="grid gap-2 sm:grid-cols-2">
-                {category.subcategories.map((subcategory) => (
-                  <label class="flex min-h-11 items-center gap-3 rounded-md border border-line bg-surface px-3 py-2 text-sm">
-                    <input type="checkbox" name="subcategories" value={subcategory.id} disabled />
-                    <span>{subcategory.label}</span>
-                  </label>
-                ))}
-              </div>
-            ))}
+          <label class="mt-6 block">
+            <span class="text-sm font-medium">Primary category <span aria-hidden="true">*</span></span>
+            <select required id="primary-category" name="primary_category" aria-describedby="category-help" class={fieldClass}>
+              <option value="">Choose a category</option>
+              {categoryDefinitions.map((category) => <option value={category.id}>{category.label}</option>)}
+            </select>
+            <span id="category-help" class="mt-2 block text-sm leading-6 text-muted">Choose what the opportunity is. Eligibility describes who can access it.</span>
+          </label>
+
+          <fieldset class="mt-6">
+            <legend class="text-sm font-medium">Subcategories <span class="font-normal text-muted">(optional)</span></legend>
+            <p class="mt-1 text-sm leading-6 text-muted">Select the specific formats that apply.</p>
+            <p id="subcategory-prompt" class="mt-3 rounded-md border border-line bg-soft px-4 py-3 text-sm text-muted">Choose a primary category first.</p>
+            <div id="subcategory-groups" class="mt-3">
+              {categoryDefinitions.map((category) => (
+                <div data-subcategory-group={category.id} hidden class="grid gap-2 sm:grid-cols-2">
+                  {category.subcategories.map((subcategory) => (
+                    <label class="flex min-h-12 items-center gap-3 rounded-md border border-line bg-surface px-3 py-2 text-sm hover:border-brand">
+                      <input type="checkbox" name="subcategories" value={subcategory.id} disabled class="size-4 shrink-0 accent-brand" />
+                      <span>{subcategory.label}</span>
+                    </label>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </fieldset>
+
+          <label class="mt-6 block">
+            <span class="text-sm font-medium">Tags <span class="font-normal text-muted">(optional)</span></span>
+            <input name="tags" maxlength="240" placeholder="open-source, remote, climate" aria-describedby="tags-help" class={fieldClass} />
+            <span id="tags-help" class="mt-2 block text-sm leading-6 text-muted">Comma-separated discovery terms, separate from categories.</span>
+          </label>
+        </fieldset>
+
+        <fieldset class="mt-10 border-t border-line pt-7">
+          <legend class="pr-4 text-lg font-semibold text-ink">Public details</legend>
+          <p class="mt-1 text-sm leading-6 text-muted">Use plain language and preserve the provider's meaning.</p>
+
+          <label class="mt-6 block">
+            <span class="text-sm font-medium">Description <span aria-hidden="true">*</span></span>
+            <textarea required name="description" minlength="30" maxlength="2000" rows="6" class={textareaClass} placeholder="What is offered, and what makes the program useful?"></textarea>
+          </label>
+
+          <label class="mt-6 block">
+            <span class="text-sm font-medium">Eligibility <span aria-hidden="true">*</span></span>
+            <textarea required name="eligibility" minlength="20" maxlength="2000" rows="5" class={textareaClass} placeholder="Who can apply, and what requirements must they meet?"></textarea>
+          </label>
+
+          <label class="mt-6 block">
+            <span class="text-sm font-medium">Benefits <span class="font-normal text-muted">(optional)</span></span>
+            <textarea name="benefits" maxlength="2000" rows="4" class={textareaClass} placeholder="Credits, funding, access, training, or other support"></textarea>
+          </label>
+
+          <div class="mt-6 grid gap-6 sm:grid-cols-2">
+            <label class="block">
+              <span class="text-sm font-medium">Location <span class="font-normal text-muted">(optional)</span></span>
+              <input name="location" maxlength="120" class={fieldClass} placeholder="Global" />
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium">Deadline <span class="font-normal text-muted">(optional)</span></span>
+              <input type="date" name="deadline" class={fieldClass} />
+            </label>
           </div>
         </fieldset>
 
-        <label class="block">
-          <span class="text-sm font-medium">Tags <span class="font-normal text-muted">(optional)</span></span>
-          <input name="tags" maxlength="240" placeholder="open-source, remote, climate" aria-describedby="tags-help" class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3" />
-          <span id="tags-help" class="mt-2 block text-sm leading-6 text-muted">Comma-separated discovery terms. Categories describe the opportunity itself.</span>
-        </label>
+        <fieldset class="mt-10 border-t border-line pt-7">
+          <legend class="pr-4 text-lg font-semibold text-ink">Evidence</legend>
+          <p class="mt-1 text-sm leading-6 text-muted">Link directly to the provider's current program information.</p>
 
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Official source URL <span aria-hidden="true">*</span></span
-          >
-          <input
-            required
-            type="url"
-            name="source_url"
-            maxlength="500"
-            placeholder="https://"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-          />
-        </label>
-
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Organization website <span class="font-normal text-muted"
-              >(optional)</span
-            ></span
-          >
-          <input
-            type="url"
-            name="organization_website_url"
-            maxlength="500"
-            placeholder="https://"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-          />
-        </label>
-
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Description <span aria-hidden="true">*</span></span
-          >
-          <textarea
-            required
-            name="description"
-            minlength="30"
-            maxlength="2000"
-            rows="5"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-          ></textarea>
-        </label>
-
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Eligibility <span aria-hidden="true">*</span></span
-          >
-          <textarea
-            required
-            name="eligibility"
-            minlength="20"
-            maxlength="2000"
-            rows="4"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-          ></textarea>
-        </label>
-
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Benefits <span class="font-normal text-muted">(optional)</span
-            ></span
-          >
-          <textarea
-            name="benefits"
-            maxlength="2000"
-            rows="4"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-          ></textarea>
-        </label>
-
-        <div class="grid gap-6 sm:grid-cols-2">
-          <label class="block">
-            <span class="text-sm font-medium"
-              >Location <span class="font-normal text-muted">(optional)</span
-              ></span
-            >
-            <input
-              name="location"
-              maxlength="120"
-              class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-              placeholder="Global"
-            />
+          <label class="mt-6 block">
+            <span class="text-sm font-medium">Official source URL <span aria-hidden="true">*</span></span>
+            <input required type="url" name="source_url" maxlength="500" placeholder="https://example.org/program" class={fieldClass} />
           </label>
-          <label class="block">
-            <span class="text-sm font-medium"
-              >Deadline <span class="font-normal text-muted">(optional)</span
-              ></span
-            >
-            <input
-              type="date"
-              name="deadline"
-              class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-            />
+
+          <label class="mt-6 block">
+            <span class="text-sm font-medium">Organization website <span class="font-normal text-muted">(optional)</span></span>
+            <input type="url" name="organization_website_url" maxlength="500" placeholder="https://example.org" class={fieldClass} />
           </label>
+        </fieldset>
+
+        <fieldset class="mt-10 border-t border-line pt-7">
+          <legend class="pr-4 text-lg font-semibold text-ink">Contributor details</legend>
+          <p class="mt-1 text-sm leading-6 text-muted">These details help moderators follow up and are not published.</p>
+
+          <div class="mt-6 grid gap-6 sm:grid-cols-2">
+            <label class="block">
+              <span class="text-sm font-medium">Your name <span class="font-normal text-muted">(optional)</span></span>
+              <input name="submitter_name" maxlength="100" class={fieldClass} autocomplete="name" />
+            </label>
+
+            <label class="block">
+              <span class="text-sm font-medium">Your email <span class="font-normal text-muted">(optional, never published)</span></span>
+              <input type="email" name="submitter_email" maxlength="254" class={fieldClass} autocomplete="email" />
+            </label>
+          </div>
+
+          <label class="mt-6 block">
+            <span class="text-sm font-medium">Notes for moderators <span class="font-normal text-muted">(optional)</span></span>
+            <textarea name="submitter_notes" maxlength="1000" rows="3" class={textareaClass}></textarea>
+          </label>
+
+          <label class="mt-6 flex min-h-12 gap-3 rounded-md border border-line bg-soft px-4 py-3 text-sm leading-6">
+            <input required type="checkbox" name="affiliationConfirmed" value="true" class="mt-1 size-4 shrink-0 accent-brand" />
+            <span>I have disclosed my affiliation in the description, or I have no affiliation with this provider.</span>
+          </label>
+        </fieldset>
+
+        {turnstileKey && <div class="cf-turnstile mt-7" data-sitekey={turnstileKey} />}
+
+        <div class="mt-8 flex flex-col items-start gap-3 border-t border-line pt-7 sm:flex-row sm:items-center">
+          <button type="submit" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-action px-6 font-medium text-white hover:bg-action-hover disabled:cursor-wait disabled:opacity-60">
+            <Send size={18} aria-hidden="true" /> Send for review
+          </button>
+          <p id="form-status" class="text-sm text-muted" role="status" aria-live="polite"></p>
         </div>
-
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Your name <span class="font-normal text-muted">(optional)</span
-            ></span
-          >
-          <input
-            name="submitter_name"
-            maxlength="100"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-            autocomplete="name"
-          />
-        </label>
-
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Your email <span class="font-normal text-muted"
-              >(optional, never published)</span
-            ></span
-          >
-          <input
-            type="email"
-            name="submitter_email"
-            maxlength="254"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-            autocomplete="email"
-          />
-        </label>
-
-        <label class="block">
-          <span class="text-sm font-medium"
-            >Notes for moderators <span class="font-normal text-muted"
-              >(optional)</span
-            ></span
-          >
-          <textarea
-            name="submitter_notes"
-            maxlength="1000"
-            rows="3"
-            class="mt-2 w-full rounded-md border border-line bg-surface px-4 py-3"
-          ></textarea>
-        </label>
-
-        <label class="flex gap-3 text-sm leading-6">
-          <input
-            required
-            type="checkbox"
-            name="affiliationConfirmed"
-            value="true"
-            class="mt-1 size-4"
-          />
-          <span
-            >I have disclosed my affiliation in the description, or I have no
-            affiliation with this provider.</span
-          >
-        </label>
-
-        {
-          turnstileKey && (
-            <div class="cf-turnstile" data-sitekey={turnstileKey} />
-          )
-        }
-
-        <button
-          type="submit"
-          class="rounded-md bg-action px-5 py-3 font-medium text-white disabled:cursor-wait disabled:opacity-60"
-        >
-          Send for review
-        </button>
-        <p id="form-status" class="text-sm" role="status" aria-live="polite">
-        </p>
       </form>
     </div>
   </section>
 
-  {
-    turnstileKey && (
-      <script
-        is:inline
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-        async
-        defer
-      />
-    )
-  }
+  {turnstileKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />}
 
   <script>
     const form = document.querySelector<HTMLFormElement>("#submission-form");
@@ -288,6 +173,49 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
     const categorySelect = document.querySelector<HTMLSelectElement>("#primary-category");
     const subcategoryPrompt = document.querySelector<HTMLElement>("#subcategory-prompt");
     const subcategoryGroups = [...document.querySelectorAll<HTMLElement>("[data-subcategory-group]")];
+
+    const preview = {
+      provider: document.querySelector<HTMLElement>("#preview-provider"),
+      title: document.querySelector<HTMLElement>("#preview-title"),
+      category: document.querySelector<HTMLElement>("#preview-category"),
+      subcategories: document.querySelector<HTMLElement>("#preview-subcategories"),
+      tags: document.querySelector<HTMLElement>("#preview-tags"),
+      description: document.querySelector<HTMLElement>("#preview-description"),
+      eligibility: document.querySelector<HTMLElement>("#preview-eligibility"),
+      benefits: document.querySelector<HTMLElement>("#preview-benefits"),
+      benefitsSection: document.querySelector<HTMLElement>("#preview-benefits-section"),
+      location: document.querySelector<HTMLElement>("#preview-location"),
+      deadline: document.querySelector<HTMLElement>("#preview-deadline"),
+      deadlineWrap: document.querySelector<HTMLElement>("#preview-deadline-wrap"),
+      sourceWrap: document.querySelector<HTMLElement>("#preview-source-wrap"),
+      sourceDomain: document.querySelector<HTMLElement>("#preview-source-domain"),
+    };
+
+    const valueOf = (name: string) => {
+      const field = form?.elements.namedItem(name);
+      return field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement
+        ? field.value.trim()
+        : "";
+    };
+
+    const normalizedTags = () => valueOf("tags")
+      .split(",")
+      .map((tag) => tag.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""))
+      .filter((tag, index, values) => tag && values.indexOf(tag) === index);
+
+    const renderChips = (container: HTMLElement | null, labels: string[], style: "soft" | "outline") => {
+      if (!container) return;
+      container.replaceChildren(...labels.map((label) => {
+        const chip = document.createElement("span");
+        chip.className = style === "soft"
+          ? "rounded bg-soft px-2 py-1 text-xs text-muted"
+          : "rounded border border-line px-2 py-1 text-xs text-muted";
+        chip.textContent = style === "outline" ? `#${label}` : label;
+        return chip;
+      }));
+      container.classList.toggle("hidden", labels.length === 0);
+      container.classList.toggle("flex", labels.length > 0);
+    };
 
     function updateSubcategories() {
       const category = categorySelect?.value ?? "";
@@ -302,8 +230,51 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
       if (subcategoryPrompt) subcategoryPrompt.hidden = Boolean(category);
     }
 
-    categorySelect?.addEventListener("change", updateSubcategories);
+    function updatePreview() {
+      if (preview.provider) preview.provider.textContent = valueOf("organization") || "Provider name";
+      if (preview.title) preview.title.textContent = valueOf("name") || "Opportunity title";
+      if (preview.description) preview.description.textContent = valueOf("description") || "Your description will appear here.";
+      if (preview.eligibility) preview.eligibility.textContent = valueOf("eligibility") || "Who can access this opportunity?";
+      if (preview.location) preview.location.textContent = valueOf("location") || "Global";
+
+      const selectedCategory = categorySelect?.selectedOptions[0];
+      if (preview.category) preview.category.textContent = categorySelect?.value ? selectedCategory?.textContent?.trim() || "Category" : "Choose a category";
+
+      const selectedSubcategories = [...(form?.querySelectorAll<HTMLInputElement>('input[name="subcategories"]:checked') ?? [])]
+        .map((input) => input.closest("label")?.querySelector("span")?.textContent?.trim() ?? input.value);
+      renderChips(preview.subcategories, selectedSubcategories, "soft");
+      renderChips(preview.tags, normalizedTags(), "outline");
+
+      const benefits = valueOf("benefits");
+      if (preview.benefits) preview.benefits.textContent = benefits;
+      preview.benefitsSection?.classList.toggle("hidden", !benefits);
+
+      const deadline = valueOf("deadline");
+      if (preview.deadline) {
+        preview.deadline.textContent = deadline
+          ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(`${deadline}T00:00:00`))
+          : "";
+      }
+      preview.deadlineWrap?.classList.toggle("hidden", !deadline);
+      preview.deadlineWrap?.classList.toggle("inline-flex", Boolean(deadline));
+
+      let sourceDomain = "";
+      try {
+        const url = new URL(valueOf("source_url"));
+        if (url.protocol === "https:" || url.protocol === "http:") sourceDomain = url.hostname.replace(/^www\./, "");
+      } catch {}
+      if (preview.sourceDomain) preview.sourceDomain.textContent = sourceDomain;
+      preview.sourceWrap?.classList.toggle("hidden", !sourceDomain);
+    }
+
+    categorySelect?.addEventListener("change", () => {
+      updateSubcategories();
+      updatePreview();
+    });
+    form?.addEventListener("input", updatePreview);
+    form?.addEventListener("change", updatePreview);
     updateSubcategories();
+    updatePreview();
 
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -312,9 +283,7 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
       const formData = new FormData(form);
       if (formData.get("website")) return;
 
-      const button = form.querySelector<HTMLButtonElement>(
-        "button[type=submit]",
-      );
+      const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
       if (button) button.disabled = true;
       if (status) status.textContent = "Sending...";
 
@@ -322,10 +291,6 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
         const value = String(formData.get(name) ?? "").trim();
         return value || null;
       };
-      const tags = String(formData.get("tags") ?? "")
-        .split(",")
-        .map((tag) => tag.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""))
-        .filter((tag, index, values) => tag && values.indexOf(tag) === index);
 
       try {
         const response = await fetch("/api/submissions", {
@@ -336,7 +301,7 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
             name: String(formData.get("name") ?? "").trim(),
             primary_category: String(formData.get("primary_category") ?? ""),
             subcategories: formData.getAll("subcategories").map(String),
-            tags,
+            tags: normalizedTags(),
             source_url: String(formData.get("source_url") ?? "").trim(),
             organization_website_url: optionalValue("organization_website_url"),
             description: String(formData.get("description") ?? "").trim(),
@@ -347,26 +312,21 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
             submitter_name: optionalValue("submitter_name"),
             submitter_email: optionalValue("submitter_email"),
             submitter_notes: optionalValue("submitter_notes"),
-            affiliation_confirmed:
-              formData.get("affiliationConfirmed") === "true",
+            affiliation_confirmed: formData.get("affiliationConfirmed") === "true",
             website: optionalValue("website"),
             turnstile_token: optionalValue("cf-turnstile-response"),
           }),
         });
         if (!response.ok) {
-          const payload = (await response.json()) as {
-            error?: { message?: string };
-          };
+          const payload = (await response.json()) as { error?: { message?: string } };
           throw new Error(payload.error?.message ?? "Submission failed.");
         }
         form.reset();
         updateSubcategories();
-        if (status)
-          status.textContent =
-            "Submitted. A moderator will review the evidence before publication.";
+        updatePreview();
+        if (status) status.textContent = "Submitted. A moderator will review the evidence before publication.";
       } catch {
-        if (status)
-          status.textContent = "Submission failed. Please try again later.";
+        if (status) status.textContent = "Submission failed. Please try again later.";
       }
 
       if (button) button.disabled = false;

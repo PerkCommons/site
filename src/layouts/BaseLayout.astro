@@ -1,5 +1,5 @@
 ---
-import { Github, Menu, Moon, Sun, X } from "lucide-astro";
+import { Github, Menu, Moon, ShieldCheck, Sun, X } from "lucide-astro";
 import "../styles/global.css";
 
 interface Props { title: string; description: string; noindex?: boolean; }
@@ -54,12 +54,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
           <a href="/about/" class="hover:text-ink">How it works</a>
           <a href="https://github.com/PerkCommons/data" class="hover:text-ink">Open data</a>
           <a href="https://github.com/PerkCommons" class="inline-flex items-center gap-1.5 hover:text-ink"><Github size={16} /> GitHub</a>
+          <a href="/moderator-login/" class="grid size-11 place-items-center rounded-md border border-line text-ink" aria-label="Moderator sign in" title="Moderator sign in"><ShieldCheck size={19} aria-hidden="true" /></a>
           <a href="/submit/" class="rounded-md bg-action px-4 py-2.5 text-white hover:bg-action-hover">Submit an opportunity</a>
         </nav>
         <button id="menu-button" class="grid size-10 place-items-center rounded-md border border-line md:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><Menu id="menu-open" size={20} /><X id="menu-close" class="hidden" size={20} /></button>
       </div>
       <nav id="mobile-menu" class="container hidden border-t border-line py-3 md:hidden" aria-label="Mobile navigation">
-        <a class="block py-3" href="/opportunities/">Browse</a><a class="block py-3" href="/categories/">Categories</a><a class="block py-3" href="/about/">How it works</a><a class="block py-3" href="https://github.com/PerkCommons/data">Open data</a><a class="block py-3" href="/submit/">Submit an opportunity</a>
+        <a class="block py-3" href="/opportunities/">Browse</a><a class="block py-3" href="/categories/">Categories</a><a class="block py-3" href="/about/">How it works</a><a class="block py-3" href="https://github.com/PerkCommons/data">Open data</a><a class="flex min-h-11 items-center gap-2 py-3" href="/moderator-login/"><ShieldCheck size={18} aria-hidden="true" /> Moderator sign in</a><a class="block py-3" href="/submit/">Submit an opportunity</a>
       </nav>
     </header>
     <main id="main"><slot /></main>
@@ -67,7 +68,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       <div class="container grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_.8fr_.9fr_1.3fr]">
         <div><p class="font-semibold text-ink">PerkCommons</p><p class="mt-2 max-w-md leading-6">An open, community-maintained index of credible opportunities. Free to browse and reuse.</p></div>
         <div><p class="font-semibold text-ink">Project</p><a class="mt-3 block" href="/about/">About</a><a class="mt-2 block" href="https://github.com/PerkCommons/docs">Policies</a><a class="mt-2 block" href="https://github.com/PerkCommons/data">Dataset</a></div>
-        <div><p class="font-semibold text-ink">Participate</p><a class="mt-3 block" href="/submit/">Submit</a><a class="mt-2 block" href="https://github.com/PerkCommons/data/issues">Report a correction</a></div>
+        <div><p class="font-semibold text-ink">Participate</p><a class="mt-3 block" href="/submit/">Submit</a><a class="mt-2 block" href="https://github.com/PerkCommons/data/issues">Report a correction</a><a class="mt-2 inline-flex items-center gap-1.5" href="/moderator-login/"><ShieldCheck size={15} aria-hidden="true" /> Moderator sign in</a></div>
         <div aria-label="Contact">
           <p class="font-semibold text-ink">Contact</p>
           <a class="mt-3 block" href="mailto:hello@perkcommons.com">General</a>

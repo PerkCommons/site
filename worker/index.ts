@@ -7,10 +7,14 @@ import {
   createSession,
   currentModerator,
   destroySession,
+  featureListing,
+  isListingRemoved,
   moderationAction,
   moderationError,
   moderators,
   queue,
+  publicListingState,
+  purgeRejected,
   removeBan,
   reports,
   resolveReport,
@@ -28,6 +32,8 @@ const submissionDetailPattern =
   /^\/api\/moderation\/submissions\/([0-9a-f-]+)$/i;
 const banPattern = /^\/api\/moderation\/bans\/([0-9a-f-]+)$/i;
 const reportPattern = /^\/api\/moderation\/reports\/([0-9a-f-]+)\/resolve$/i;
+const featurePattern = /^\/api\/moderation\/listings\/([a-z0-9-]+)\/feature$/;
+const publicListingPattern = /^\/opportunities\/([a-z0-9-]+)\/?$/;
 
 async function api(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
@@ -40,6 +46,10 @@ async function api(request: Request, env: Env): Promise<Response> {
     if (path === "/api/reports")
       return request.method === "POST"
         ? await handlePublicReport(request, env)
+        : methodNotAllowed();
+    if (path === "/api/listings/state")
+      return request.method === "GET"
+        ? await publicListingState(env)
         : methodNotAllowed();
     if (path === "/api/auth/session")
       return request.method === "POST"
@@ -71,11 +81,22 @@ async function api(request: Request, env: Env): Promise<Response> {
         : request.method === "POST"
           ? await createBan(request, env)
           : methodNotAllowed();
+    if (path === "/api/moderation/rejected")
+      return request.method === "DELETE"
+        ? await purgeRejected(request, env, null)
+        : methodNotAllowed();
+    const featureMatch = path.match(featurePattern);
+    if (featureMatch?.[1])
+      return request.method === "POST"
+        ? await featureListing(request, env, featureMatch[1])
+        : methodNotAllowed();
     const detailMatch = path.match(submissionDetailPattern);
     if (detailMatch?.[1])
       return request.method === "GET"
         ? await submissionDetail(request, env, detailMatch[1])
-        : methodNotAllowed();
+        : request.method === "DELETE"
+          ? await purgeRejected(request, env, detailMatch[1])
+          : methodNotAllowed();
     const actionMatch = path.match(submissionActionPattern);
     if (actionMatch?.[1] && actionMatch[2])
       return request.method === "POST"
@@ -119,6 +140,23 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/")) return api(request, env);
+    const publicListing = url.pathname.match(publicListingPattern);
+    if (
+      request.method === "GET" &&
+      publicListing?.[1] &&
+      (await isListingRemoved(env, publicListing[1]))
+    )
+      return new Response(
+        '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="robots" content="noindex"><title>Listing removed - PerkCommons</title></head><body><main><h1>Listing removed</h1><p>This opportunity was removed after moderator review.</p><p><a href="/opportunities/">Browse other opportunities</a></p></main></body></html>',
+        {
+          status: 410,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-store",
+            "x-content-type-options": "nosniff",
+          },
+        },
+      );
     if (url.pathname === "/moderate" || url.pathname.startsWith("/moderate/")) {
       try {
         await requireModerator(request, env);

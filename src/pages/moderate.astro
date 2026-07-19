@@ -8,6 +8,7 @@ import {
   LogOut,
   RefreshCw,
   Search,
+  Trash2,
   Undo2,
   Users,
   X,
@@ -87,7 +88,7 @@ import { categoryDefinitions } from "../lib/taxonomy";
       <div class="mt-5 flex items-center justify-between gap-3 text-sm">
         <p>
           <strong id="queue-name">Pending</strong>
-          <span id="queue-count" class="text-muted">0 submissions</span>
+          <span id="queue-count" class="ml-1 text-muted">0 submissions</span>
         </p>
         <p id="queue-position" class="text-muted"></p>
       </div>
@@ -112,7 +113,7 @@ import { categoryDefinitions } from "../lib/taxonomy";
         >
           <div
             id="swipe-overlay"
-            class="pointer-events-none absolute inset-0 z-10 hidden place-items-center bg-surface/90 text-2xl font-bold"
+            class="swipe-overlay pointer-events-none absolute inset-0 z-10 hidden place-items-center text-2xl font-bold"
             aria-hidden="true"
           >
           </div>
@@ -363,6 +364,18 @@ import { categoryDefinitions } from "../lib/taxonomy";
         >
         </div>
       </section>
+
+      <section id="archive-view" class="mt-5 hidden" aria-labelledby="archive-heading">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="archive-heading" class="text-lg font-semibold">Reviewed submissions</h2>
+          <button
+            id="purge-rejected-button"
+            type="button"
+            class="hidden min-h-11 items-center gap-2 rounded-md border border-red-300 px-4 text-sm font-semibold text-red-700"
+          ><Trash2 size={17} /> Delete all rejected</button>
+        </div>
+        <div id="archive-list" class="mt-3 divide-y divide-line border-y border-line"></div>
+      </section>
     </div>
   </section>
 
@@ -370,7 +383,7 @@ import { categoryDefinitions } from "../lib/taxonomy";
     id="review-actions"
     class="fixed inset-x-0 bottom-0 z-20 hidden border-t border-line bg-surface/95 px-4 pb-[calc(.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur"
   >
-    <div class="mx-auto grid max-w-xl grid-cols-3 gap-3">
+    <div id="review-action-grid" class="mx-auto grid max-w-xl grid-cols-3 gap-3">
       <button
         id="decline-button"
         type="button"
@@ -801,6 +814,27 @@ import { categoryDefinitions } from "../lib/taxonomy";
       </div>
       <button type="submit" class="mt-5 min-h-11 w-full rounded-md bg-action px-4 font-semibold text-white">Save moderator profile</button>
       <section class="mt-6 border-t border-line pt-5" aria-labelledby="moderator-list-heading"><h3 id="moderator-list-heading" class="font-semibold">Moderator profiles</h3><div id="moderator-list" class="mt-3 space-y-2 text-sm text-muted"></div></section>
+    </form>
+  </dialog>
+
+  <dialog
+    id="report-decision-dialog"
+    aria-labelledby="report-decision-heading"
+    class="moderation-dialog w-[min(480px,calc(100%-2rem))] rounded-md border-0 p-0 shadow-xl"
+  >
+    <form id="report-decision-form" class="p-5 sm:p-7">
+      <div class="flex items-center justify-between gap-4">
+        <h2 id="report-decision-heading" class="text-xl font-semibold">Review report</h2>
+        <button type="button" data-close-dialog class="grid size-11 place-items-center" aria-label="Close"><X size={20} /></button>
+      </div>
+      <p id="report-decision-description" class="mt-2 text-sm leading-6 text-muted"></p>
+      <input type="hidden" name="report_id" />
+      <input type="hidden" name="decision" />
+      <label class="mt-5 block">
+        <span class="text-sm font-medium">Moderator note <span class="font-normal text-muted">(optional)</span></span>
+        <textarea name="notes" maxlength="1000" rows="4" class="mt-1 w-full rounded-md border border-line p-3"></textarea>
+      </label>
+      <button id="report-decision-submit" type="submit" class="mt-5 min-h-11 w-full rounded-md px-4 font-semibold text-white">Confirm</button>
     </form>
   </dialog>
 

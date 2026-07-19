@@ -40,6 +40,17 @@ export function nextStatusForAction(
   return statuses[action] ?? previous;
 }
 
+export function actionAllowedForStatus(
+  status: SubmissionStatus,
+  action: string,
+): boolean {
+  if (status === "pending")
+    return ["approve", "decline", "flag", "notes"].includes(action);
+  if (status === "flagged")
+    return ["approve", "decline", "unflag", "notes"].includes(action);
+  return false;
+}
+
 export interface AuditAction {
   action: string;
   previous_status: SubmissionStatus;

@@ -48,7 +48,7 @@ const listings = await getListings();
           ...listing.subcategories.map((item) => subcategoryLabel(listing.category, item)),
           ...listing.tags,
         ].join(" ").toLowerCase();
-        return <div data-search={search} data-category={listing.category}><ListingCard listing={listing} /></div>;
+        return <div data-search={search} data-category={listing.category} data-listing-id={listing.id}><ListingCard listing={listing} /></div>;
       })}
     </div>
     <div id="empty" class="hidden py-16 text-center">

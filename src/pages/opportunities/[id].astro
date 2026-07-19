@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Flag,
   Globe2,
+  Star,
   Tag,
   X,
 } from "lucide-astro";
@@ -32,7 +33,7 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
   title={`${listing.title} — PerkCommons`}
   description={listing.description}
 >
-  <article class="container py-12" data-pagefind-body>
+  <article class="container py-12" data-pagefind-body data-listing-id={listing.id} data-listing-detail>
     <a
       href="/opportunities/"
       class="inline-flex items-center gap-2 text-sm text-muted"
@@ -59,12 +60,12 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
         </div>
         <p class="mt-7 font-medium text-muted" data-pagefind-meta="provider">
           {listing.provider}
-        </p><h1
-          class="mt-2 max-w-3xl text-4xl font-semibold leading-tight"
+        </p><div class="mt-2 flex max-w-3xl items-start gap-3"><h1
+          class="text-4xl font-semibold leading-tight"
           data-pagefind-meta="title"
         >
           {listing.title}
-        </h1><p class="mt-6 max-w-3xl text-lg leading-8 text-muted">
+        </h1><span data-feature-star={listing.id} class="mt-2 hidden shrink-0 text-amber-500" aria-label="Featured opportunity" title="Featured opportunity"><Star size={28} fill="currentColor" aria-hidden="true" /></span></div><button data-feature-toggle={listing.id} type="button" class="mt-3 hidden min-h-11 items-center gap-2 rounded-md border border-line px-3 text-sm font-medium" aria-pressed="false"><Star size={17} aria-hidden="true" /><span>Feature opportunity</span></button><p data-feature-status role="status" aria-live="polite" class="mt-2 text-sm text-muted"></p><p class="mt-6 max-w-3xl text-lg leading-8 text-muted">
           {listing.description}
         </p>
         <section class="mt-10 border-t border-line pt-8">

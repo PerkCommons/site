@@ -19,6 +19,7 @@ async function verifyTurnstile(
   env: Env,
   token: string | null,
   ip: string | null,
+  expectedAction: "public-submission" | "public-report",
 ): Promise<boolean> {
   if (!env.TURNSTILE_SECRET_KEY) return true;
   const body = new URLSearchParams({
@@ -30,9 +31,33 @@ async function verifyTurnstile(
     "https://challenges.cloudflare.com/turnstile/v0/siteverify",
     { method: "POST", body },
   );
-  if (!response.ok) return false;
-  const result = (await response.json()) as { success?: boolean };
-  return result.success === true;
+  if (!response.ok) {
+    console.warn(
+      JSON.stringify({
+        event: "turnstile_siteverify_unavailable",
+        status: response.status,
+      }),
+    );
+    return false;
+  }
+  const result = (await response.json()) as {
+    success?: boolean;
+    "error-codes"?: string[];
+    action?: string;
+    hostname?: string;
+  };
+  const valid = result.success === true && result.action === expectedAction;
+  if (!valid) {
+    console.warn(
+      JSON.stringify({
+        event: "turnstile_verification_failed",
+        errors: result["error-codes"]?.slice(0, 5) ?? [],
+        action: result.action ?? null,
+        hostname: result.hostname ?? null,
+      }),
+    );
+  }
+  return valid;
 }
 
 async function isRateLimited(
@@ -114,7 +139,14 @@ export async function handlePublicSubmission(
       429,
       "rate_limited",
     );
-  if (!(await verifyTurnstile(env, input.turnstile_token, signals.rawIp)))
+  if (
+    !(await verifyTurnstile(
+      env,
+      input.turnstile_token,
+      signals.rawIp,
+      "public-submission",
+    ))
+  )
     return apiError("Spam verification failed.", 400, "spam_check_failed");
 
   const banMode = await matchingBanMode(env, signals.emailHash, signals.ipHash);
@@ -185,7 +217,14 @@ export async function handlePublicReport(
       429,
       "rate_limited",
     );
-  if (!(await verifyTurnstile(env, input.turnstile_token, signals.rawIp)))
+  if (
+    !(await verifyTurnstile(
+      env,
+      input.turnstile_token,
+      signals.rawIp,
+      "public-report",
+    ))
+  )
     return apiError("Spam verification failed.", 400, "spam_check_failed");
   await insertRows(env, "listing_reports", {
     listing_id: input.listing_id,

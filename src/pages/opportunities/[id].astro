@@ -234,7 +234,7 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
       >
       {
         turnstileKey && (
-          <div class="cf-turnstile mt-4" data-sitekey={turnstileKey} />
+          <div id="report-turnstile" class="mt-4" data-sitekey={turnstileKey} />
         )
       }
       <button
@@ -255,17 +255,28 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
     turnstileKey && (
       <script
         is:inline
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         async
         defer
       />
     )
   }
   <script>
+    import { TurnstileController } from "../../lib/turnstile-client";
+
     const reportDialog =
       document.querySelector<HTMLDialogElement>("#report-dialog");
     const reportForm = document.querySelector<HTMLFormElement>("#report-form");
     const reportStatus = document.querySelector<HTMLElement>("#report-status");
+    const turnstileContainer =
+      document.querySelector<HTMLElement>("#report-turnstile");
+    const turnstile = turnstileContainer?.dataset.sitekey
+      ? new TurnstileController(
+          turnstileContainer,
+          turnstileContainer.dataset.sitekey,
+          "public-report",
+        )
+      : null;
     document
       .querySelector("#report-listing")
       ?.addEventListener("click", () => reportDialog?.showModal());
@@ -283,8 +294,12 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
         "button[type=submit]",
       );
       if (button) button.disabled = true;
-      if (reportStatus) reportStatus.textContent = "Sending...";
+      if (reportStatus) reportStatus.textContent = turnstile
+        ? "Completing security verification..."
+        : "Sending...";
       try {
+        const turnstileToken = turnstile ? await turnstile.token() : null;
+        if (reportStatus) reportStatus.textContent = "Sending...";
         const response = await fetch("/api/reports", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -294,18 +309,29 @@ const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
             details: data.get("details"),
             reporter_email: data.get("reporter_email"),
             website: data.get("website"),
-            turnstile_token: data.get("cf-turnstile-response"),
+            turnstile_token: turnstileToken,
           }),
         });
-        if (!response.ok) throw new Error("Report failed");
+        if (!response.ok) {
+          const payload = (await response.json()) as {
+            error?: { code?: string; message?: string };
+          };
+          throw new Error(
+            payload.error?.code === "spam_check_failed"
+              ? "Security verification expired or failed. Please try again."
+              : payload.error?.message ?? "Report failed.",
+          );
+        }
         reportForm.reset();
         if (reportStatus)
           reportStatus.textContent = "Report received for moderator review.";
-      } catch {
+      } catch (error) {
         if (reportStatus)
-          reportStatus.textContent =
-            "Report could not be sent. Please try again later.";
+          reportStatus.textContent = error instanceof Error
+            ? error.message
+            : "Report could not be sent. Please try again later.";
       } finally {
+        await turnstile?.reset();
         if (button) button.disabled = false;
       }
     });

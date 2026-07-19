@@ -1,4 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page, type Route } from "@playwright/test";
+
+async function mockTurnstile(page: Page) {
+  await page.route(
+    "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit",
+    async (route: Route) => {
+      await route.fulfill({
+        contentType: "text/javascript",
+        body: `window.turnstile={render:function(_container,options){window.__turnstileOptions=options;return "test-widget"},execute:function(){queueMicrotask(function(){window.__turnstileOptions.callback("test-turnstile-token")})},reset:function(){}};`,
+      });
+    },
+  );
+}
 
 test("home page exposes the public index without overflow", async ({
   page,
@@ -183,6 +195,7 @@ test("theme changes respect reduced motion", async ({ page }) => {
 test("submission form sends a reviewable opportunity through the Worker", async ({
   page,
 }, testInfo) => {
+  await mockTurnstile(page);
   let submission: Record<string, unknown> | undefined;
 
   await page.route("**/api/submissions", async (route) => {
@@ -195,6 +208,8 @@ test("submission form sends a reviewable opportunity through the Worker", async 
   });
 
   await page.goto("/submit/");
+  const turnstileEnabled =
+    (await page.locator("#submission-turnstile").count()) > 0;
   await page.getByLabel("Provider *").fill("Example Foundation");
   await page
     .getByLabel("Opportunity title *")
@@ -254,6 +269,7 @@ test("submission form sends a reviewable opportunity through the Worker", async 
     primary_category: "funding",
     subcategories: ["grants"],
     tags: ["open-source", "remote"],
+    turnstile_token: turnstileEnabled ? "test-turnstile-token" : null,
   });
   await expect(preview.getByRole("heading", { name: "Opportunity title" })).toBeVisible();
   await expect(preview.getByText("Provider name", { exact: true })).toBeVisible();
@@ -299,6 +315,7 @@ test("submission preview is safe, responsive, and visible on mobile", async ({
 test("published listings accept reports without changing listing visibility", async ({
   page,
 }) => {
+  await mockTurnstile(page);
   let report: Record<string, unknown> | undefined;
   await page.route("**/api/reports", async (route) => {
     report = route.request().postDataJSON() as Record<string, unknown>;
@@ -309,6 +326,8 @@ test("published listings accept reports without changing listing visibility", as
     });
   });
   await page.goto("/opportunities/github-student-developer-pack/");
+  const turnstileEnabled =
+    (await page.locator("#report-turnstile").count()) > 0;
   await page.getByRole("button", { name: "Report this listing" }).click();
   await page.getByLabel("Reason").selectOption("Broken link");
   await page
@@ -321,6 +340,7 @@ test("published listings accept reports without changing listing visibility", as
   expect(report).toMatchObject({
     listing_id: "github-student-developer-pack",
     reason: "Broken link",
+    turnstile_token: turnstileEnabled ? "test-turnstile-token" : null,
   });
   await expect(
     page.getByRole("heading", { name: "GitHub Student Developer Pack" }),

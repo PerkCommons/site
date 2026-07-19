@@ -98,3 +98,41 @@ test("public database failures are converted to a generic service error", async 
     console.error = originalError;
   }
 });
+
+test("public submissions reject invalid Turnstile tokens before insertion", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalWarn = console.warn;
+  let call = 0;
+  const protectedEnv = {
+    ...env,
+    TURNSTILE_SECRET_KEY: "test-turnstile-secret",
+  } satisfies Env;
+  globalThis.fetch = async (input) => {
+    call += 1;
+    if (call === 1) return Response.json([]);
+    assert.equal(
+      String(input),
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+    );
+    return Response.json({
+      success: false,
+      "error-codes": ["invalid-input-response"],
+    });
+  };
+  console.warn = () => undefined;
+
+  try {
+    const response = await worker.fetch(request(), protectedEnv);
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: {
+        code: "spam_check_failed",
+        message: "Spam verification failed.",
+      },
+    });
+    assert.equal(call, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.warn = originalWarn;
+  }
+});

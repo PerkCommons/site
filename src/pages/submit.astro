@@ -153,7 +153,15 @@ const textareaClass = `${fieldClass} resize-y`;
           </label>
         </fieldset>
 
-        {turnstileKey && <div class="cf-turnstile mt-7" data-sitekey={turnstileKey} />}
+        {
+          turnstileKey && (
+            <div
+              id="submission-turnstile"
+              class="mt-7"
+              data-sitekey={turnstileKey}
+            />
+          )
+        }
 
         <div class="mt-8 flex flex-col items-start gap-3 border-t border-line pt-7 sm:flex-row sm:items-center">
           <button type="submit" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-action px-6 font-medium text-white hover:bg-action-hover disabled:cursor-wait disabled:opacity-60">
@@ -165,9 +173,20 @@ const textareaClass = `${fieldClass} resize-y`;
     </div>
   </section>
 
-  {turnstileKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />}
+  {
+    turnstileKey && (
+      <script
+        is:inline
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+        async
+        defer
+      />
+    )
+  }
 
   <script>
+    import { TurnstileController } from "../lib/turnstile-client";
+
     const form = document.querySelector<HTMLFormElement>("#submission-form");
     const status = document.querySelector<HTMLElement>("#form-status");
     const categorySelect = document.querySelector<HTMLSelectElement>("#primary-category");
@@ -276,6 +295,16 @@ const textareaClass = `${fieldClass} resize-y`;
     updateSubcategories();
     updatePreview();
 
+    const turnstileContainer =
+      document.querySelector<HTMLElement>("#submission-turnstile");
+    const turnstile = turnstileContainer?.dataset.sitekey
+      ? new TurnstileController(
+          turnstileContainer,
+          turnstileContainer.dataset.sitekey,
+          "public-submission",
+        )
+      : null;
+
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!form.reportValidity()) return;
@@ -285,7 +314,9 @@ const textareaClass = `${fieldClass} resize-y`;
 
       const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
       if (button) button.disabled = true;
-      if (status) status.textContent = "Sending...";
+      if (status) status.textContent = turnstile
+        ? "Completing security verification..."
+        : "Sending...";
 
       const optionalValue = (name: string) => {
         const value = String(formData.get(name) ?? "").trim();
@@ -293,6 +324,8 @@ const textareaClass = `${fieldClass} resize-y`;
       };
 
       try {
+        const turnstileToken = turnstile ? await turnstile.token() : null;
+        if (status) status.textContent = "Sending...";
         const response = await fetch("/api/submissions", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -314,22 +347,33 @@ const textareaClass = `${fieldClass} resize-y`;
             submitter_notes: optionalValue("submitter_notes"),
             affiliation_confirmed: formData.get("affiliationConfirmed") === "true",
             website: optionalValue("website"),
-            turnstile_token: optionalValue("cf-turnstile-response"),
+            turnstile_token: turnstileToken,
           }),
         });
         if (!response.ok) {
-          const payload = (await response.json()) as { error?: { message?: string } };
-          throw new Error(payload.error?.message ?? "Submission failed.");
+          const payload = (await response.json()) as {
+            error?: { code?: string; message?: string };
+          };
+          throw new Error(
+            payload.error?.code === "spam_check_failed"
+              ? "Security verification expired or failed. Please try again."
+              : payload.error?.message ?? "Submission failed.",
+          );
         }
         form.reset();
         updateSubcategories();
         updatePreview();
         if (status) status.textContent = "Submitted. A moderator will review the evidence before publication.";
-      } catch {
-        if (status) status.textContent = "Submission failed. Please try again later.";
+      } catch (error) {
+        if (status) {
+          status.textContent = error instanceof Error
+            ? error.message
+            : "Submission failed. Please try again later.";
+        }
+      } finally {
+        await turnstile?.reset();
+        if (button) button.disabled = false;
       }
-
-      if (button) button.disabled = false;
     });
   </script>
 </BaseLayout>

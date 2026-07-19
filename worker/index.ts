@@ -1,6 +1,7 @@
 import { requireModerator } from "./lib/auth";
 import { methodNotAllowed } from "./lib/http";
 import type { Env } from "./lib/types";
+import { reconcilePublicationBatches } from "./lib/publication";
 import {
   bans,
   createBan,
@@ -14,6 +15,7 @@ import {
   moderators,
   queue,
   publicListingState,
+  publications,
   purgeRejected,
   removeBan,
   reports,
@@ -84,6 +86,10 @@ async function api(request: Request, env: Env): Promise<Response> {
     if (path === "/api/moderation/rejected")
       return request.method === "DELETE"
         ? await purgeRejected(request, env, null)
+        : methodNotAllowed();
+    if (path === "/api/moderation/publications")
+      return request.method === "GET" || request.method === "POST"
+        ? await publications(request, env)
         : methodNotAllowed();
     const featureMatch = path.match(featurePattern);
     if (featureMatch?.[1])
@@ -167,5 +173,12 @@ export default {
       }
     }
     return env.ASSETS.fetch(request);
+  },
+  async scheduled(
+    _controller: ScheduledController,
+    env: Env,
+    context: ExecutionContext,
+  ): Promise<void> {
+    context.waitUntil(reconcilePublicationBatches(env));
   },
 } satisfies ExportedHandler<Env>;

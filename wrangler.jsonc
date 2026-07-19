@@ -3,6 +3,9 @@
   "name": "perkcommons-site",
   "compatibility_date": "2026-07-17",
   "main": "./worker/index.ts",
+  "triggers": {
+    "crons": ["*/2 * * * *"]
+  },
   "assets": {
     "binding": "ASSETS",
     "directory": "./dist",

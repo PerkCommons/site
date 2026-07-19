@@ -39,6 +39,16 @@ let currentContext: ModerationContext = {};
 let moderatorRole: "reviewer" | "admin" = "reviewer";
 let undoTarget: string | null = null;
 let undoTimer: number | undefined;
+let publicationTimer: number | undefined;
+
+interface PublicationBatch {
+  id: string;
+  status: "preparing" | "validating" | "merging" | "published" | "failed";
+  item_count: number;
+  github_pr_url: string | null;
+  last_error_code: string | null;
+  deployment_requested_at: string | null;
+}
 
 const categoryFilter = element<HTMLSelectElement>("#moderation-category-filter");
 
@@ -399,9 +409,17 @@ function renderArchive() {
   setQueueLabels(submissions.length);
   const list = element("#archive-list");
   const purgeAll = element("#purge-rejected-button");
+  const publicationControls = element("#publication-controls");
   const rejected = activeQueue === "rejected";
+  const approved = activeQueue === "approved";
   purgeAll.classList.toggle("hidden", !rejected || !submissions.length);
   purgeAll.classList.toggle("flex", rejected && Boolean(submissions.length));
+  show(publicationControls, approved && moderatorRole === "admin");
+  if (approved && moderatorRole === "admin") void loadPublicationState();
+  else if (publicationTimer !== undefined) {
+    window.clearTimeout(publicationTimer);
+    publicationTimer = undefined;
+  }
   list.replaceChildren();
   submissions.forEach((submission) => {
     const row = document.createElement("div");
@@ -425,6 +443,76 @@ function renderArchive() {
     queueState.textContent = `No ${activeQueue} submissions.`;
     show(queueState, true);
     show(archiveView, false);
+  }
+}
+
+const publicationMessage = (batch: PublicationBatch | null): string => {
+  if (!batch) return "Approved records will be validated in PerkCommons/data before deployment.";
+  if (batch.status === "preparing") return "Preparing the publication pull request. Retry if this does not advance.";
+  if (batch.status === "validating")
+    return batch.last_error_code === "validation_failed"
+      ? "Data validation failed. Open the pull request for details."
+      : "The data pull request is waiting for validation.";
+  if (batch.status === "merging") return "Validation passed. The data pull request is merging.";
+  if (batch.status === "failed") return "This publication batch needs attention before it can be retried.";
+  return batch.deployment_requested_at
+    ? "Published and the site deployment was requested."
+    : "Published. The site deployment will be requested shortly.";
+};
+
+async function loadPublicationState() {
+  if (activeQueue !== "approved" || moderatorRole !== "admin") return;
+  if (publicationTimer !== undefined) window.clearTimeout(publicationTimer);
+  publicationTimer = undefined;
+  const button = element<HTMLButtonElement>("#publish-approved-button");
+  const status = element("#publication-status");
+  const link = element<HTMLAnchorElement>("#publication-pr-link");
+  try {
+    const result = await api<{
+      batch: PublicationBatch | null;
+      approved_count: number;
+    }>("/api/moderation/publications");
+    const active =
+      result.batch && ["preparing", "validating", "merging"].includes(result.batch.status);
+    button.disabled = Boolean(active) || result.approved_count === 0;
+    button.querySelector("span")!.textContent = active
+      ? `Publishing ${result.batch!.item_count} approved`
+      : result.approved_count
+        ? `Publish all ${result.approved_count} approved`
+        : "No approved submissions to publish";
+    status.textContent = publicationMessage(result.batch);
+    if (result.batch?.github_pr_url) {
+      link.href = result.batch.github_pr_url;
+      show(link, true);
+    } else {
+      link.removeAttribute("href");
+      show(link, false);
+    }
+    if (active)
+      publicationTimer = window.setTimeout(() => void loadPublicationState(), 8_000);
+  } catch (error) {
+    button.disabled = false;
+    status.textContent =
+      error instanceof Error ? error.message : "Publication status is unavailable.";
+  }
+}
+
+async function publishApproved() {
+  const button = element<HTMLButtonElement>("#publish-approved-button");
+  if (!confirm("Publish every approved submission as one validated data batch?")) return;
+  button.disabled = true;
+  element("#publication-status").textContent = "Preparing publication batch...";
+  try {
+    const result = await api<{
+      message: string;
+      batch: PublicationBatch | null;
+    }>("/api/moderation/publications", { method: "POST", body: "{}" });
+    announcer.textContent = result.message;
+    await loadPublicationState();
+  } catch (error) {
+    announcer.textContent =
+      error instanceof Error ? error.message : "Publication could not be started.";
+    await loadPublicationState();
   }
 }
 
@@ -746,6 +834,9 @@ element("#moderators-button").addEventListener("click", () => {
 element("#undo-button").addEventListener("click", () => void undo());
 element("#purge-rejected-button").addEventListener("click", () =>
   void purgeRejected(null),
+);
+element("#publish-approved-button").addEventListener("click", () =>
+  void publishApproved(),
 );
 document
   .querySelectorAll<HTMLElement>("[data-close-dialog]")

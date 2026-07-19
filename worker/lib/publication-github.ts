@@ -71,6 +71,12 @@ const githubRequest = async <T>(
 };
 
 export const publicationBranch = (batchId: string) => `publication-${batchId}`;
+export const removalBranch = (batchId: string) => `removal-${batchId}`;
+
+export interface RemovalPullRequestResult {
+  baseSha: string;
+  pullRequest: GithubPullRequest | null;
+}
 
 export const createPublicationPullRequest = async (
   token: string | undefined,
@@ -169,6 +175,117 @@ export const createPublicationPullRequest = async (
   return pullRequest;
 };
 
+export const createRemovalPullRequest = async (
+  token: string | undefined,
+  batchId: string,
+  listingId: string,
+): Promise<RemovalPullRequestResult> => {
+  const branch = removalBranch(batchId);
+  const existingPulls = await githubRequest<GithubPullRequest[]>(
+    token,
+    `/repos/${DATA_REPOSITORY}/pulls?state=open&base=${DATA_BRANCH}&head=PerkCommons:${branch}`,
+  );
+  if (existingPulls?.[0])
+    return { baseSha: existingPulls[0].head.sha, pullRequest: existingPulls[0] };
+
+  const baseReference = await githubRequest<{ object: { sha: string } }>(
+    token,
+    `/repos/${DATA_REPOSITORY}/git/ref/heads/${DATA_BRANCH}`,
+  );
+  if (!baseReference) throw new GithubError(404, "read data branch");
+
+  const opportunityPath = `opportunities/${listingId}.json`;
+  const opportunity = await githubRequest<{ sha: string }>(
+    token,
+    `/repos/${DATA_REPOSITORY}/contents/${opportunityPath}?ref=${DATA_BRANCH}`,
+    undefined,
+    true,
+  );
+  if (!opportunity)
+    return { baseSha: baseReference.object.sha, pullRequest: null };
+
+  const baseCommit = await githubRequest<{ tree: { sha: string } }>(
+    token,
+    `/repos/${DATA_REPOSITORY}/git/commits/${baseReference.object.sha}`,
+  );
+  if (!baseCommit) throw new GithubError(404, "read data commit");
+  const tree = await githubRequest<{ sha: string }>(
+    token,
+    `/repos/${DATA_REPOSITORY}/git/trees`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        base_tree: baseCommit.tree.sha,
+        tree: [
+          {
+            path: opportunityPath,
+            mode: "100644",
+            type: "blob",
+            sha: null,
+          },
+        ],
+      }),
+    },
+  );
+  if (!tree) throw new GithubError(500, "create removal tree");
+  const commit = await githubRequest<{ sha: string }>(
+    token,
+    `/repos/${DATA_REPOSITORY}/git/commits`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        message: `fix(data): remove reported opportunity ${listingId}`,
+        tree: tree.sha,
+        parents: [baseReference.object.sha],
+      }),
+    },
+  );
+  if (!commit) throw new GithubError(500, "create removal commit");
+
+  const referencePath = `/repos/${DATA_REPOSITORY}/git/refs/heads/${branch}`;
+  const existingReference = await githubRequest<{ object: { sha: string } }>(
+    token,
+    referencePath,
+    undefined,
+    true,
+  );
+  await githubRequest(
+    token,
+    existingReference ? referencePath : `/repos/${DATA_REPOSITORY}/git/refs`,
+    {
+      method: existingReference ? "PATCH" : "POST",
+      body: JSON.stringify(
+        existingReference
+          ? { sha: commit.sha, force: true }
+          : { ref: `refs/heads/${branch}`, sha: commit.sha },
+      ),
+    },
+  );
+
+  const pullRequest = await githubRequest<GithubPullRequest>(
+    token,
+    `/repos/${DATA_REPOSITORY}/pulls`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        title: `fix(data): remove reported opportunity ${listingId}`,
+        head: branch,
+        base: DATA_BRANCH,
+        body: [
+          "## Automated reported-listing removal",
+          "",
+          `Removal batch: \`${batchId}\``,
+          `Listing: \`${listingId}\``,
+          "",
+          "A moderator upheld a public report for this listing. The listing remains suppressed while this pull request validates and is removed from the published dataset.",
+        ].join("\n"),
+      }),
+    },
+  );
+  if (!pullRequest) throw new GithubError(500, "create removal pull request");
+  return { baseSha: baseReference.object.sha, pullRequest };
+};
+
 export const getPublicationPullRequest = (
   token: string | undefined,
   number: number,
@@ -204,6 +321,25 @@ export const mergePublicationPullRequest = (
         sha,
         merge_method: "squash",
         commit_title: `feat(data): publish ${itemCount} approved opportunities`,
+      }),
+    },
+  );
+
+export const mergeRemovalPullRequest = (
+  token: string | undefined,
+  number: number,
+  sha: string,
+  listingId: string,
+) =>
+  githubRequest<{ merged: boolean; sha: string }>(
+    token,
+    `/repos/${DATA_REPOSITORY}/pulls/${number}/merge`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        sha,
+        merge_method: "squash",
+        commit_title: `fix(data): remove reported opportunity ${listingId}`,
       }),
     },
   );

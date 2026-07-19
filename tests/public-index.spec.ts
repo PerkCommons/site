@@ -334,7 +334,7 @@ test("published listings accept reports without changing listing visibility", as
     .getByLabel("Details (optional)")
     .fill("The application link currently returns an error.");
   await page.getByRole("button", { name: "Send report" }).click();
-  await expect(page.getByRole("status")).toHaveText(
+  await expect(page.locator("#report-status")).toHaveText(
     "Report received for moderator review.",
   );
   expect(report).toMatchObject({
@@ -345,4 +345,60 @@ test("published listings accept reports without changing listing visibility", as
   await expect(
     page.getByRole("heading", { name: "GitHub Student Developer Pack" }),
   ).toBeVisible();
+});
+
+test("featured listing stars are public and moderators can toggle them", async ({
+  page,
+}) => {
+  const listingId = "github-student-developer-pack";
+  await page.route("**/api/listings/state", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        listings: [{ listing_id: listingId, featured: true, removed: false }],
+      }),
+    }),
+  );
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ moderator: { role: "reviewer" } }),
+    }),
+  );
+  let featured: boolean | undefined;
+  await page.route("**/api/moderation/listings/*/feature", async (route) => {
+    featured = (route.request().postDataJSON() as { featured: boolean }).featured;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Feature removed." }),
+    });
+  });
+  await page.goto(`/opportunities/${listingId}/`);
+  await expect(page.locator(`[data-feature-star="${listingId}"]`)).toBeVisible();
+  const toggle = page.getByRole("button", { name: "Remove featured status" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await toggle.click();
+  await expect.poll(() => featured).toBe(false);
+  await expect(page.locator(`[data-feature-star="${listingId}"]`)).toBeHidden();
+});
+
+test("upheld reports suppress removed listing details", async ({ page }) => {
+  const listingId = "github-student-developer-pack";
+  await page.route("**/api/listings/state", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        listings: [{ listing_id: listingId, featured: false, removed: true }],
+      }),
+    }),
+  );
+  await page.goto(`/opportunities/${listingId}/`);
+  await expect(page.getByRole("heading", { name: "Listing removed" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "GitHub Student Developer Pack" }),
+  ).toHaveCount(0);
 });

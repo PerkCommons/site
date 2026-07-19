@@ -37,6 +37,7 @@ async function mockModeration(
   options: {
     role?: "reviewer" | "admin";
     submission?: typeof baseSubmission;
+    reports?: Array<Record<string, unknown>>;
   } = {},
 ) {
   const submission = options.submission ?? baseSubmission;
@@ -52,17 +53,19 @@ async function mockModeration(
       }),
     }),
   );
-  await page.route("**/api/moderation/queue?*", (route) =>
-    route.fulfill({
+  await page.route("**/api/moderation/queue?*", (route) => {
+    const status = new URL(route.request().url()).searchParams.get("status") ??
+      submission.status;
+    return route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        queue: "pending",
+        queue: status,
         count: 1,
-        submissions: [submission],
+        submissions: [{ ...submission, status }],
       }),
-    }),
-  );
+    });
+  });
   await page.route(`**/api/moderation/submissions/${submission.id}`, (route) =>
     route.fulfill({
       status: 200,
@@ -74,7 +77,10 @@ async function mockModeration(
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ count: 0, reports: [] }),
+      body: JSON.stringify({
+        count: options.reports?.length ?? 0,
+        reports: options.reports ?? [],
+      }),
     }),
   );
 }
@@ -413,6 +419,124 @@ test("mobile research sheet and reduced motion remain usable", async ({
       ),
     )
     .toBe(true);
+});
+
+test("theme colors keep selects and swipe actions readable", async ({ page }) => {
+  await mockModeration(page);
+  await page.goto("/moderate/");
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  const selectColors = await page
+    .getByLabel("Filter queue by category")
+    .evaluate((select) => {
+      const style = getComputedStyle(select);
+      return { color: style.color, background: style.backgroundColor };
+    });
+  expect(selectColors.color).not.toBe(selectColors.background);
+
+  const card = page.locator("#review-card");
+  const box = await card.boundingBox();
+  if (!box) throw new Error("Review card is not visible");
+  await page.mouse.move(box.x + 30, box.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 100, box.y + 30);
+  const overlay = page.locator("#swipe-overlay");
+  await expect(overlay).toHaveText("APPROVE");
+  const overlayColors = await overlay.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { color: style.color, background: style.backgroundColor };
+  });
+  expect(overlayColors.color).not.toBe(overlayColors.background);
+  await page.mouse.up();
+});
+
+test("queue controls match the allowed state transitions", async ({ page }) => {
+  await mockModeration(page);
+  await page.goto("/moderate/");
+
+  await page.getByRole("button", { name: "Flagged" }).click();
+  await expect(page.getByRole("button", { name: "Flag", exact: true })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible();
+  await page.keyboard.press("f");
+  await expect(page.getByRole("dialog", { name: "Flag for review" })).toBeHidden();
+
+  await page.getByRole("button", { name: "Approved" }).click();
+  await expect(page.locator("#archive-list")).toContainText(
+    "Open Infrastructure Grant",
+  );
+  await expect(page.locator("#review-actions")).toBeHidden();
+  await expect(page.locator("#review-card")).toBeHidden();
+  await page.keyboard.press("d");
+  await expect(page.getByRole("dialog", { name: "Decline submission" })).toBeHidden();
+});
+
+test("reports support upheld and dismissed decisions with moderator notes", async ({
+  page,
+}) => {
+  const report = {
+    id: "44444444-4444-4444-8444-444444444444",
+    listing_id: "github-student-developer-pack",
+    reason: "Broken link",
+    details: "The source no longer resolves.",
+    reporter_country_code: "PL",
+    created_at: new Date().toISOString(),
+  };
+  await mockModeration(page, { reports: [report] });
+  let decision: Record<string, unknown> | undefined;
+  await page.route("**/api/moderation/reports/*/resolve", async (route) => {
+    decision = route.request().postDataJSON() as Record<string, unknown>;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Report updated." }),
+    });
+  });
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.goto("/moderate/");
+  await page.getByRole("button", { name: "Reports" }).click();
+  await page
+    .getByRole("button", { name: "Approve report and remove listing" })
+    .click();
+  const decisionDialog = page.getByRole("dialog", { name: "Approve report" });
+  await decisionDialog.getByLabel("Moderator note (optional)").fill(
+    "Official source confirmed unavailable.",
+  );
+  await decisionDialog
+    .getByRole("button", { name: "Approve and remove listing" })
+    .click();
+  await expect.poll(() => decision).toMatchObject({
+    decision: "upheld",
+    notes: "Official source confirmed unavailable.",
+  });
+});
+
+test("rejected queue supports confirmed individual and bulk cleanup", async ({
+  page,
+}) => {
+  await mockModeration(page);
+  const deletions: string[] = [];
+  await page.route("**/api/moderation/submissions/*", async (route) => {
+    if (route.request().method() === "DELETE") deletions.push(route.request().url());
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "1 rejected submission deleted.", count: 1 }),
+    });
+  });
+  await page.route("**/api/moderation/rejected", async (route) => {
+    deletions.push(route.request().url());
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "1 rejected submission deleted.", count: 1 }),
+    });
+  });
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.goto("/moderate/");
+  await page.getByRole("button", { name: "Rejected" }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect.poll(() => deletions.length).toBe(1);
+  await page.getByRole("button", { name: "Delete all rejected" }).click();
+  await expect.poll(() => deletions.length).toBe(2);
 });
 
 test("ban controls are admin-only and require confirmation", async ({

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  actionAllowedForStatus,
   buildAuditAction,
   canUndoAction,
   isBanActive,
@@ -40,6 +41,15 @@ test("reviewers cannot use administrator controls", () => {
   assert.equal(roleAllows("reviewer", "review"), true);
   assert.equal(roleAllows("reviewer", "ban"), false);
   assert.equal(roleAllows("admin", "manage_moderators"), true);
+});
+
+test("review actions are limited to pending and flagged queues", () => {
+  assert.equal(actionAllowedForStatus("pending", "flag"), true);
+  assert.equal(actionAllowedForStatus("flagged", "flag"), false);
+  assert.equal(actionAllowedForStatus("flagged", "approve"), true);
+  assert.equal(actionAllowedForStatus("approved", "decline"), false);
+  assert.equal(actionAllowedForStatus("rejected", "approve"), false);
+  assert.equal(actionAllowedForStatus("published", "flag"), false);
 });
 
 test("audit actions preserve status transitions and undo has a bounded window", () => {

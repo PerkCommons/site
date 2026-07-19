@@ -57,6 +57,11 @@ normalized opportunities. It backfills recognized legacy categories and
 updates approval storage. Apply it before deploying a Worker that accepts the
 expanded taxonomy.
 
+Migration `202607190001_moderation_workspace.sql` adds audited featured and
+removed state for Git-backed listings, explicit report decisions with notes,
+and transactional rejected-submission cleanup. Apply it before deploying the
+corresponding workspace and Worker changes.
+
 Approval does not publish a listing. A later trusted integration can read
 `normalized_opportunities` and prepare a draft pull request for
 `PerkCommons/data`.
@@ -77,6 +82,22 @@ add, deactivate, or change later moderator profiles. A normal authenticated Supa
 moderation access without an active profile. Reviewers can decide, flag,
 unflag, annotate, undo, and resolve reports. Only admins can manage moderator
 profiles and bans.
+
+Pending submissions can be approved, declined, or flagged. Flagged submissions
+can be approved, declined, or unflagged. The Worker rejects these transitions
+from archive queues even if a client calls an endpoint directly.
+
+Upholding a listing report immediately suppresses the listing on the public
+site, makes its direct detail URL return `410 Gone`, and records the decision
+and optional note. The Worker caches visible/removed checks at the edge for one
+minute to limit database reads. Because published opportunity
+files remain Git-owned, a maintainer must still remove or correct the source
+file in `PerkCommons/data` through a reviewed pull request. Dismissing a report
+keeps the listing public. Neither outcome silently rewrites the dataset.
+
+Moderators can feature a published listing from its public detail page. The
+public state endpoint exposes only listing IDs and non-sensitive featured or
+removed booleans; moderator identity and audit metadata remain private.
 
 ## Environment variables
 
@@ -158,6 +179,11 @@ those human decisions. The initial accountable maintainer, `CodWasTaken`,
 reviews those counts quarterly. The canonical public policy and decision record
 live in the `PerkCommons/docs` repository.
 
+`supabase/migrations/202607190001_moderation_workspace.sql` replaces that
+function with the same retention schedule using the current `upheld` and
+`dismissed` terminal report statuses. Apply it after the original moderation
+and retention migrations.
+
 The cleanup function is the only privileged exception to append-only
 moderation history. It removes sensitive notes after one year and complete
 audit events after three years according to the adopted policy. Changes to
@@ -185,6 +211,12 @@ displays a warning. The redacted brief excludes submitter identity, private
 notes, fingerprints, internal moderator identity, and ban metadata. Do not paste
 an unredacted brief into an untrusted third-party service.
 
+The Rejected queue provides individual and bulk permanent deletion controls.
+These are intentionally explicit and confirmed: automatically deleting at the
+moment of rejection would break the ten-second Undo promise and erase evidence
+before the adopted retention review. Every purge writes an audit snapshot
+before cascading private submission and fingerprint rows.
+
 ## API routes
 
 Public:
@@ -192,6 +224,7 @@ Public:
 ```text
 POST /api/submissions
 POST /api/reports
+GET  /api/listings/state
 POST /api/auth/session
 POST /api/auth/logout
 GET  /api/auth/me
@@ -210,6 +243,9 @@ POST /api/moderation/submissions/:id/undo
 POST /api/moderation/submissions/:id/notes
 GET  /api/moderation/reports
 POST /api/moderation/reports/:id/resolve
+POST /api/moderation/listings/:id/feature
+DELETE /api/moderation/submissions/:id
+DELETE /api/moderation/rejected
 ```
 
 Admin:
@@ -240,7 +276,8 @@ or neither.
 
 ## Deployment checklist
 
-- [ ] Review and apply the Supabase migration.
+- [ ] Review and apply `202607190001_moderation_workspace.sql` after the
+      existing moderation and retention migrations.
 - [ ] Create the first Auth user and administrator profile.
 - [ ] Set all Cloudflare build variables and Worker runtime secrets.
 - [ ] Configure Turnstile and confirm the `SUBMISSION_RATE_LIMITER` binding.

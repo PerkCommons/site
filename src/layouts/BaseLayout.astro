@@ -141,6 +141,105 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         if (!saved)
           applyTheme(event.matches ? "dark" : "light", false);
       });
+
+      const listingNodes = [
+        ...document.querySelectorAll<HTMLElement>("[data-listing-id]"),
+      ];
+      if (listingNodes.length) {
+        void fetch("/api/listings/state")
+          .then(async (response) => {
+            if (!response.ok) return;
+            const payload = (await response.json()) as {
+              listings?: Array<{
+                listing_id: string;
+                featured: boolean;
+                removed: boolean;
+              }>;
+            };
+            const states = new Map(
+              (payload.listings ?? []).map((item) => [item.listing_id, item]),
+            );
+            listingNodes.forEach((node) => {
+              const id = node.dataset.listingId;
+              if (!id) return;
+              const state = states.get(id);
+              if (state?.removed) {
+                if (node.hasAttribute("data-listing-detail")) {
+                  node.replaceChildren();
+                  const notice = document.createElement("section");
+                  notice.className = "py-16 text-center";
+                  const heading = document.createElement("h1");
+                  heading.className = "text-3xl font-semibold";
+                  heading.textContent = "Listing removed";
+                  const detail = document.createElement("p");
+                  detail.className = "mt-3 text-muted";
+                  detail.textContent =
+                    "This opportunity was removed after moderator review.";
+                  const back = document.createElement("a");
+                  back.href = "/opportunities/";
+                  back.className = "mt-6 inline-flex font-medium";
+                  back.textContent = "Browse other opportunities";
+                  notice.append(heading, detail, back);
+                  node.append(notice);
+                } else node.hidden = true;
+              }
+              document
+                .querySelectorAll<HTMLElement>(`[data-feature-star="${CSS.escape(id)}"]`)
+                .forEach((star) => star.classList.toggle("hidden", !state?.featured));
+            });
+
+            const toggle = document.querySelector<HTMLButtonElement>(
+              "[data-feature-toggle]",
+            );
+            if (!toggle?.dataset.featureToggle) return;
+            const auth = await fetch("/api/auth/me");
+            if (!auth.ok) return;
+            const id = toggle.dataset.featureToggle;
+            let featured = states.get(id)?.featured ?? false;
+            const featureStatus = document.querySelector<HTMLElement>(
+              "[data-feature-status]",
+            );
+            const updateToggle = () => {
+              toggle.setAttribute("aria-pressed", String(featured));
+              toggle.querySelector("span")!.textContent = featured
+                ? "Remove featured status"
+                : "Feature opportunity";
+              toggle.classList.remove("hidden");
+              toggle.classList.add("inline-flex");
+            };
+            updateToggle();
+            toggle.addEventListener("click", async () => {
+              toggle.disabled = true;
+              try {
+                const response = await fetch(
+                  `/api/moderation/listings/${encodeURIComponent(id)}/feature`,
+                  {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ featured: !featured }),
+                  },
+                );
+                if (!response.ok) {
+                  if (featureStatus)
+                    featureStatus.textContent = "Featured status could not be updated.";
+                  return;
+                }
+                featured = !featured;
+                document
+                  .querySelectorAll<HTMLElement>(`[data-feature-star="${CSS.escape(id)}"]`)
+                  .forEach((star) => star.classList.toggle("hidden", !featured));
+                updateToggle();
+                if (featureStatus)
+                  featureStatus.textContent = featured
+                    ? "Opportunity marked as featured."
+                    : "Featured status removed.";
+              } finally {
+                toggle.disabled = false;
+              }
+            });
+          })
+          .catch(() => undefined);
+      }
     </script>
   </body>
 </html>

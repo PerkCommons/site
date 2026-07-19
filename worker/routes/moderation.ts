@@ -5,6 +5,7 @@ import {
   authenticateToken,
 } from "../lib/auth";
 import { maskEmail } from "../lib/fingerprints";
+import { actionAllowedForStatus } from "../lib/moderation-policy";
 import {
   apiError,
   assertSameOrigin,
@@ -12,8 +13,13 @@ import {
   readJson,
   RequestError,
 } from "../lib/http";
-import { callRpc, insertRows, supabaseRequest } from "../lib/supabase";
-import type { Env, Moderator } from "../lib/types";
+import {
+  callRpc,
+  insertRows,
+  SupabaseError,
+  supabaseRequest,
+} from "../lib/supabase";
+import type { Env, Moderator, SubmissionStatus } from "../lib/types";
 import {
   optionalNote,
   requiredChoice,
@@ -244,6 +250,17 @@ export async function moderationAction(
     });
     return json({ message: "Previous action undone.", action_id: actionId });
   }
+  const { data: statusRows } = await supabaseRequest<Array<{ status: string }>>(
+    env,
+    `/rest/v1/opportunity_submissions?id=eq.${encodeURIComponent(id)}&select=status&limit=1`,
+  );
+  const status = statusRows[0]?.status as SubmissionStatus | undefined;
+  if (!status || !actionAllowedForStatus(status, action))
+    throw new RequestError(
+      "This action is not available in the submission's current queue.",
+      409,
+      "invalid_status_transition",
+    );
   const body = asRecord(await readJson(request));
   if (action === "approve")
     return moderate(
@@ -304,32 +321,110 @@ export async function resolveReport(
   assertSameOrigin(request);
   const moderator = await requireModerator(request, env);
   const body = asRecord(await readJson(request, 8_000));
-  const status = requiredChoice(
-    body.status ?? "resolved",
-    new Set(["resolved", "dismissed"]),
-    "Report status",
+  const decision = requiredChoice(
+    body.decision,
+    new Set(["upheld", "dismissed"]),
+    "Report decision",
   );
-  await supabaseRequest(
-    env,
-    `/rest/v1/listing_reports?id=eq.${encodeURIComponent(id)}`,
-    {
-      method: "PATCH",
-      headers: { "content-type": "application/json", prefer: "return=minimal" },
-      body: JSON.stringify({
-        status,
-        assigned_to: moderator.userId,
-        resolved_at: new Date().toISOString(),
-      }),
-    },
-  );
-  await insertRows(env, "moderation_actions", {
-    moderator_id: moderator.userId,
-    action: "report_resolved",
-    reason: status,
-    notes: optionalNote(body.notes),
-    metadata: { report_id: id },
+  const listingId = await callRpc<string>(env, "resolve_listing_report", {
+    p_report_id: id,
+    p_moderator_id: moderator.userId,
+    p_decision: decision,
+    p_notes: optionalNote(body.notes),
   });
-  return json({ message: "Report updated." });
+  await caches.default.delete(listingStateCacheRequest(listingId));
+  return json({
+    message:
+      decision === "upheld"
+        ? "Report upheld and listing removed from the public index."
+        : "Report dismissed; listing retained.",
+    listing_id: listingId,
+  });
+}
+
+const listingId = (value: string): string => {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value))
+    throw new RequestError("Listing ID is invalid.", 400, "validation_failed");
+  return value;
+};
+
+const listingStateCacheRequest = (id: string) =>
+  new Request(`https://perkcommons.com/__listing-state-cache/${id}`);
+
+export async function isListingRemoved(env: Env, id: string): Promise<boolean> {
+  const validId = listingId(id);
+  const cacheKey = listingStateCacheRequest(validId);
+  const cached = await caches.default.match(cacheKey);
+  if (cached) return (await cached.text()) === "removed";
+  try {
+    const { data } = await supabaseRequest<Array<{ listing_id: string }>>(
+      env,
+      `/rest/v1/listing_moderation_state?listing_id=eq.${encodeURIComponent(validId)}&removed=eq.true&select=listing_id&limit=1`,
+    );
+    const removed = Boolean(data[0]);
+    await caches.default.put(
+      cacheKey,
+      new Response(removed ? "removed" : "visible", {
+        headers: { "cache-control": "public, max-age=60" },
+      }),
+    );
+    return removed;
+  } catch (error) {
+    // Static listings remain available during a database or migration outage.
+    if (error instanceof SupabaseError) {
+      console.warn(
+        JSON.stringify({
+          event: "listing_suppression_check_failed",
+          status: error.status,
+          database_code: error.databaseCode,
+        }),
+      );
+      return false;
+    }
+    throw error;
+  }
+}
+
+export async function publicListingState(env: Env): Promise<Response> {
+  const { data } = await supabaseRequest<
+    Array<{ listing_id: string; featured: boolean; removed: boolean }>
+  >(
+    env,
+    "/rest/v1/listing_moderation_state?or=(featured.eq.true,removed.eq.true)&select=listing_id,featured,removed",
+  );
+  return json({ listings: data });
+}
+
+export async function featureListing(
+  request: Request,
+  env: Env,
+  id: string,
+): Promise<Response> {
+  assertSameOrigin(request);
+  const moderator = await requireModerator(request, env);
+  const body = asRecord(await readJson(request, 2_000));
+  if (typeof body.featured !== "boolean")
+    throw new RequestError("Featured state is required.", 400, "validation_failed");
+  await callRpc<void>(env, "set_listing_featured", {
+    p_listing_id: listingId(id),
+    p_moderator_id: moderator.userId,
+    p_featured: body.featured,
+  });
+  return json({ message: body.featured ? "Listing featured." : "Feature removed." });
+}
+
+export async function purgeRejected(
+  request: Request,
+  env: Env,
+  id: string | null,
+): Promise<Response> {
+  assertSameOrigin(request);
+  const moderator = await requireModerator(request, env);
+  const count = await callRpc<number>(env, "purge_rejected_submissions", {
+    p_moderator_id: moderator.userId,
+    p_submission_id: id,
+  });
+  return json({ message: `${count} rejected submission${count === 1 ? "" : "s"} deleted.`, count });
 }
 
 export async function moderators(

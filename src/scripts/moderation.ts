@@ -24,6 +24,7 @@ const element = <T extends HTMLElement>(selector: string): T => {
 
 const workspace = element<HTMLElement>("#review-workspace");
 const reportsView = element<HTMLElement>("#reports-view");
+const archiveView = element<HTMLElement>("#archive-view");
 const queueState = element<HTMLElement>("#queue-state");
 const actionBar = element<HTMLElement>("#review-actions");
 const card = element<HTMLElement>("#review-card");
@@ -51,6 +52,10 @@ const current = (): ModerationSubmission | null =>
   submissions[position] ?? null;
 const titleCase = (value: string) =>
   value.charAt(0).toUpperCase() + value.slice(1);
+const show = (node: HTMLElement, visible: boolean) => {
+  node.hidden = !visible;
+  node.classList.toggle("hidden", !visible);
+};
 
 const renderPills = (selector: string, values: string[]) => {
   const container = element(selector);
@@ -91,22 +96,21 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 function setLoading(message = "Loading submissions...") {
   queueState.textContent = message;
-  queueState.classList.remove("hidden");
-  workspace.classList.add("hidden");
-  reportsView.classList.add("hidden");
-  actionBar.classList.add("hidden");
+  show(queueState, true);
+  show(workspace, false);
+  show(reportsView, false);
+  show(archiveView, false);
+  show(actionBar, false);
 }
 
 function setQueueLabels(count: number) {
-  text("#queue-name", titleCase(activeQueue));
-  text(
-    "#queue-count",
-    `${count} ${activeQueue === "reports" ? "reports" : "submissions"}`,
-  );
-  text(
-    "#queue-position",
-    count && activeQueue !== "reports" ? `${position + 1} of ${count}` : "",
-  );
+  element("#queue-name").textContent = titleCase(activeQueue);
+  element("#queue-count").textContent =
+    `${count} ${activeQueue === "reports" ? "reports" : "submissions"}`;
+  element("#queue-position").textContent =
+    count && (activeQueue === "pending" || activeQueue === "flagged")
+      ? `${position + 1} of ${count}`
+      : "";
   document
     .querySelectorAll<HTMLButtonElement>("[data-queue]")
     .forEach((button) => {
@@ -210,13 +214,21 @@ function renderSubmission() {
   if (!submission) {
     setQueueLabels(0);
     setLoading(`No ${activeQueue} submissions.`);
-    queueState.classList.remove("hidden");
+    show(queueState, true);
     return;
   }
-  queueState.classList.add("hidden");
-  reportsView.classList.add("hidden");
-  workspace.classList.remove("hidden");
-  actionBar.classList.remove("hidden");
+  show(queueState, false);
+  show(reportsView, false);
+  show(archiveView, false);
+  show(workspace, true);
+  const reviewable = activeQueue === "pending" || activeQueue === "flagged";
+  show(actionBar, reviewable);
+  const flagButton = element<HTMLButtonElement>("#flag-button");
+  const actionGrid = element("#review-action-grid");
+  const canFlag = activeQueue === "pending";
+  flagButton.classList.toggle("hidden", !canFlag);
+  actionGrid.classList.toggle("grid-cols-3", canFlag);
+  actionGrid.classList.toggle("grid-cols-2", !canFlag);
   setQueueLabels(submissions.length);
   text("#submission-organization", submission.organization);
   text("#submission-title", submission.name);
@@ -324,15 +336,16 @@ async function loadDetail(id: string) {
 }
 
 function renderReports(reports: Array<Record<string, unknown>>) {
-  queueState.classList.add("hidden");
-  workspace.classList.add("hidden");
-  actionBar.classList.add("hidden");
-  reportsView.classList.remove("hidden");
+  show(queueState, false);
+  show(workspace, false);
+  show(actionBar, false);
+  show(reportsView, true);
+  show(archiveView, false);
   const list = element("#reports-list");
   list.replaceChildren();
   if (!reports.length) {
     queueState.textContent = "No open listing reports.";
-    queueState.classList.remove("hidden");
+    show(queueState, true);
     return;
   }
   reports.forEach((report) => {
@@ -347,27 +360,72 @@ function renderReports(reports: Array<Record<string, unknown>>) {
     const meta = document.createElement("p");
     meta.className = "mt-3 text-xs text-muted";
     meta.textContent = `Reported ${new Date(String(report.created_at)).toLocaleString()} · ${countryName(typeof report.reporter_country_code === "string" ? report.reporter_country_code : null)}`;
-    const resolve = document.createElement("button");
-    resolve.type = "button";
-    resolve.className =
-      "mt-4 min-h-11 rounded-md border border-line px-4 text-sm font-medium";
-    resolve.textContent = "Mark resolved";
-    resolve.addEventListener("click", async () => {
-      try {
-        await api(`/api/moderation/reports/${String(report.id)}/resolve`, {
-          method: "POST",
-          body: JSON.stringify({ status: "resolved" }),
-        });
-        article.remove();
-        announcer.textContent = "Report resolved.";
-      } catch (error) {
-        announcer.textContent =
-          error instanceof Error ? error.message : "Could not resolve report.";
-      }
-    });
-    article.append(heading, detail, meta, resolve);
+    const listingLink = document.createElement("a");
+    listingLink.href = `/opportunities/${String(report.listing_id)}/`;
+    listingLink.target = "_blank";
+    listingLink.rel = "noopener noreferrer";
+    listingLink.className = "mt-3 inline-flex min-h-11 items-center text-sm font-medium";
+    listingLink.textContent = "Open reported listing";
+    const actions = document.createElement("div");
+    actions.className = "mt-4 grid gap-2 sm:grid-cols-2";
+    const uphold = document.createElement("button");
+    uphold.type = "button";
+    uphold.className =
+      "min-h-11 rounded-md bg-red-700 px-4 text-sm font-semibold text-white";
+    uphold.textContent = "Approve report and remove listing";
+    uphold.addEventListener("click", () =>
+      openReportDecision(String(report.id), "upheld"),
+    );
+    const dismiss = document.createElement("button");
+    dismiss.type = "button";
+    dismiss.className =
+      "min-h-11 rounded-md border border-line px-4 text-sm font-semibold";
+    dismiss.textContent = "Decline report and keep listing";
+    dismiss.addEventListener("click", () =>
+      openReportDecision(String(report.id), "dismissed"),
+    );
+    actions.append(uphold, dismiss);
+    article.append(heading, detail, meta, listingLink, actions);
     list.append(article);
   });
+}
+
+function renderArchive() {
+  show(queueState, false);
+  show(workspace, false);
+  show(reportsView, false);
+  show(actionBar, false);
+  show(archiveView, true);
+  setQueueLabels(submissions.length);
+  const list = element("#archive-list");
+  const purgeAll = element("#purge-rejected-button");
+  const rejected = activeQueue === "rejected";
+  purgeAll.classList.toggle("hidden", !rejected || !submissions.length);
+  purgeAll.classList.toggle("flex", rejected && Boolean(submissions.length));
+  list.replaceChildren();
+  submissions.forEach((submission) => {
+    const row = document.createElement("div");
+    row.className = "flex min-h-14 items-center justify-between gap-4 py-3";
+    const name = document.createElement("p");
+    name.className = "min-w-0 truncate font-medium";
+    name.textContent = submission.name;
+    row.append(name);
+    if (rejected) {
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className =
+        "min-h-11 shrink-0 rounded-md px-3 text-sm font-semibold text-red-700";
+      remove.textContent = "Delete";
+      remove.addEventListener("click", () => void purgeRejected(submission.id));
+      row.append(remove);
+    }
+    list.append(row);
+  });
+  if (!submissions.length) {
+    queueState.textContent = `No ${activeQueue} submissions.`;
+    show(queueState, true);
+    show(archiveView, false);
+  }
 }
 
 async function loadQueue(queueName: QueueName = activeQueue) {
@@ -396,10 +454,12 @@ async function loadQueue(queueName: QueueName = activeQueue) {
       `/api/moderation/queue?status=${queueName}${categoryFilter.value ? `&category=${encodeURIComponent(categoryFilter.value)}` : ""}`,
     );
     submissions = result.submissions;
-    renderSubmission();
+    if (["approved", "rejected", "published"].includes(queueName))
+      renderArchive();
+    else renderSubmission();
   } catch (error) {
     queueState.textContent = `${error instanceof Error ? error.message : "Could not load the queue."} Use refresh to try again.`;
-    queueState.classList.remove("hidden");
+    show(queueState, true);
   }
 }
 
@@ -409,6 +469,41 @@ const closeDialogs = () =>
   document
     .querySelectorAll<DialogElement>("dialog[open]")
     .forEach((item) => item.close());
+
+function openReportDecision(reportId: string, decision: "upheld" | "dismissed") {
+  const form = element<HTMLFormElement>("#report-decision-form");
+  (form.elements.namedItem("report_id") as HTMLInputElement).value = reportId;
+  (form.elements.namedItem("decision") as HTMLInputElement).value = decision;
+  (form.elements.namedItem("notes") as HTMLTextAreaElement).value = "";
+  const upheld = decision === "upheld";
+  text("#report-decision-heading", upheld ? "Approve report" : "Decline report");
+  text(
+    "#report-decision-description",
+    upheld
+      ? "This immediately suppresses the reported listing from the public index. Confirm only after checking the evidence."
+      : "The report will be dismissed and the listing will remain public.",
+  );
+  const submit = element<HTMLButtonElement>("#report-decision-submit");
+  submit.textContent = upheld ? "Approve and remove listing" : "Decline and keep listing";
+  submit.className = `mt-5 min-h-11 w-full rounded-md px-4 font-semibold text-white ${upheld ? "bg-red-700" : "bg-action"}`;
+  openDialog("#report-decision-dialog");
+}
+
+async function purgeRejected(id: string | null) {
+  const label = id ? "this rejected submission" : "all rejected submissions";
+  if (!confirm(`Permanently delete ${label}? This cannot be undone.`)) return;
+  try {
+    const result = await api<{ message: string; count: number }>(
+      id ? `/api/moderation/submissions/${id}` : "/api/moderation/rejected",
+      { method: "DELETE", body: "{}" },
+    );
+    announcer.textContent = result.message;
+    await loadQueue("rejected");
+  } catch (error) {
+    announcer.textContent =
+      error instanceof Error ? error.message : "Deletion failed.";
+  }
+}
 
 function populateApproval() {
   const submission = current();
@@ -649,6 +744,9 @@ element("#moderators-button").addEventListener("click", () => {
   void loadModerators();
 });
 element("#undo-button").addEventListener("click", () => void undo());
+element("#purge-rejected-button").addEventListener("click", () =>
+  void purgeRejected(null),
+);
 document
   .querySelectorAll<HTMLElement>("[data-close-dialog]")
   .forEach((button) => button.addEventListener("click", closeDialogs));
@@ -720,6 +818,40 @@ element<HTMLFormElement>("#flag-form").addEventListener("submit", (event) => {
     notes: data.get("notes"),
   });
 });
+element<HTMLFormElement>("#report-decision-form").addEventListener(
+  "submit",
+  async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const data = new FormData(form);
+    const reportId = String(data.get("report_id") ?? "");
+    const decision = String(data.get("decision") ?? "");
+    if (!reportId || !["upheld", "dismissed"].includes(decision)) return;
+    if (
+      decision === "upheld" &&
+      !confirm("Remove the reported listing from the public index?")
+    )
+      return;
+    try {
+      const result = await api<{ message: string }>(
+        `/api/moderation/reports/${reportId}/resolve`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            decision,
+            notes: data.get("notes"),
+          }),
+        },
+      );
+      closeDialogs();
+      announcer.textContent = result.message;
+      await loadQueue("reports");
+    } catch (error) {
+      announcer.textContent =
+        error instanceof Error ? error.message : "Could not resolve report.";
+    }
+  },
+);
 const banForm = element<HTMLFormElement>("#ban-form");
 const durationField = banForm.elements.namedItem(
   "duration_hours",
@@ -838,6 +970,7 @@ let gesture: {
   dy: number;
 } | null = null;
 card.addEventListener("pointerdown", (event) => {
+  if (activeQueue !== "pending" && activeQueue !== "flagged") return;
   if (
     (event.target as HTMLElement).closest(
       "button, a, input, textarea, select, details, summary, [data-swipe-ignore]",
@@ -860,6 +993,7 @@ card.addEventListener("pointermove", (event) => {
   gesture.dy = event.clientY - gesture.y;
   const horizontal = Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.25;
   const upward =
+    activeQueue === "pending" &&
     gesture.dy < -35 && Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.25;
   if (!horizontal && !upward) return;
   card.style.transform = `translate3d(${horizontal ? gesture.dx : 0}px, ${upward ? gesture.dy * 0.35 : 0}px, 0) rotate(${horizontal ? gesture.dx / 35 : 0}deg)`;
@@ -868,6 +1002,11 @@ card.addEventListener("pointermove", (event) => {
     : gesture.dx > 0
       ? "APPROVE"
       : "DECLINE";
+  overlay.dataset.action = upward
+    ? "flag"
+    : gesture.dx > 0
+      ? "approve"
+      : "decline";
   overlay.classList.remove("hidden");
   overlay.classList.add("grid");
 });
@@ -880,7 +1019,11 @@ const finishGesture = () => {
   card.style.transform = "";
   if (Math.abs(dx) >= 120 && Math.abs(dx) > Math.abs(dy) * 1.25)
     dx > 0 ? populateApproval() : openDialog("#decline-dialog");
-  else if (dy <= -110 && Math.abs(dy) > Math.abs(dx) * 1.25)
+  else if (
+    activeQueue === "pending" &&
+    dy <= -110 &&
+    Math.abs(dy) > Math.abs(dx) * 1.25
+  )
     openDialog("#flag-dialog");
 };
 card.addEventListener("pointerup", finishGesture);
@@ -889,15 +1032,16 @@ card.addEventListener("pointercancel", finishGesture);
 document.addEventListener("keydown", (event) => {
   if (isTyping(event.target) || document.querySelector("dialog[open]")) return;
   const key = event.key.toLowerCase();
-  if (key === "arrowleft" || key === "d") {
+  const reviewable = activeQueue === "pending" || activeQueue === "flagged";
+  if (reviewable && (key === "arrowleft" || key === "d")) {
     event.preventDefault();
     openDialog("#decline-dialog");
   }
-  if (key === "arrowright" || key === "a") {
+  if (reviewable && (key === "arrowright" || key === "a")) {
     event.preventDefault();
     populateApproval();
   }
-  if (key === "f") {
+  if (activeQueue === "pending" && key === "f") {
     event.preventDefault();
     openDialog("#flag-dialog");
   }

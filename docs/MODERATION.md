@@ -66,6 +66,12 @@ Migration `202607190002_automated_publication.sql` adds private publication
 batches and items plus transactional claim and finalization functions. Apply
 it before enabling the Approved-queue publication control.
 
+Migration `202607190003_automated_listing_removal.sql` adds private,
+idempotent removal batches for upheld listing reports. It also queues existing
+upheld reports so listings suppressed before the migration are removed from
+the Git dataset without being reported again. Apply it before deploying the
+automated removal Worker.
+
 Approval and publication remain separate decisions. An administrator can use
 **Publish all approved** to claim every approved normalized submission in one
 batch. The Worker writes one branch and pull request in `PerkCommons/data`.
@@ -98,10 +104,12 @@ from archive queues even if a client calls an endpoint directly.
 Upholding a listing report immediately suppresses the listing on the public
 site, makes its direct detail URL return `410 Gone`, and records the decision
 and optional note. The Worker caches visible/removed checks at the edge for one
-minute to limit database reads. Because published opportunity
-files remain Git-owned, a maintainer must still remove or correct the source
-file in `PerkCommons/data` through a reviewed pull request. Dismissing a report
-keeps the listing public. Neither outcome silently rewrites the dataset.
+minute to limit database reads. It also creates a deletion pull request for the
+exact stable listing ID in `PerkCommons/data`, waits for the repository's
+`validate` check, merges the change, records the merge SHA, and dispatches a
+production site rebuild. A missing data file is handled idempotently and still
+triggers a rebuild. Dismissing a report keeps the listing public and does not
+modify Git.
 
 Moderators can feature a published listing from its public detail page. The
 public state endpoint exposes only listing IDs and non-sensitive featured or
@@ -308,6 +316,8 @@ or neither.
 - [ ] Review and apply `202607190001_moderation_workspace.sql` after the
       existing moderation and retention migrations.
 - [ ] Apply `202607190002_automated_publication.sql`.
+- [ ] Apply `202607190003_automated_listing_removal.sql`; this backfills
+      removal batches for earlier upheld reports.
 - [ ] Merge the matching `PerkCommons/data` schema-limit update.
 - [ ] Configure the two fine-grained GitHub publication secrets.
 - [ ] Keep the data `validate` check required and set required approving

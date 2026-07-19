@@ -2,6 +2,7 @@ import { requireModerator } from "./lib/auth";
 import { methodNotAllowed } from "./lib/http";
 import type { Env } from "./lib/types";
 import { reconcilePublicationBatches } from "./lib/publication";
+import { reconcileListingRemovals } from "./lib/removal";
 import {
   bans,
   createBan,
@@ -179,6 +180,8 @@ export default {
     env: Env,
     context: ExecutionContext,
   ): Promise<void> {
-    context.waitUntil(reconcilePublicationBatches(env));
+    context.waitUntil(
+      reconcilePublicationBatches(env).then(() => reconcileListingRemovals(env)),
+    );
   },
 } satisfies ExportedHandler<Env>;

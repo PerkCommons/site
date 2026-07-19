@@ -10,6 +10,7 @@ import {
   publicationBatchStatus,
   startPublicationBatch,
 } from "../lib/publication";
+import { prepareListingRemovalForReport } from "../lib/removal";
 import {
   apiError,
   assertSameOrigin,
@@ -337,12 +338,32 @@ export async function resolveReport(
     p_notes: optionalNote(body.notes),
   });
   await caches.default.delete(listingStateCacheRequest(listingId));
+  let removalBatch = null;
+  if (decision === "upheld") {
+    try {
+      removalBatch = await prepareListingRemovalForReport(env, id);
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: "listing_removal_prepare_failed",
+          report_id: id,
+          error: error instanceof Error ? error.name : "unknown",
+        }),
+      );
+    }
+  }
   return json({
     message:
       decision === "upheld"
-        ? "Report upheld and listing removed from the public index."
+        ? "Report upheld. The listing is suppressed and queued for validated removal from the public dataset."
         : "Report dismissed; listing retained.",
     listing_id: listingId,
+    removal: removalBatch
+      ? {
+          status: removalBatch.status,
+          pull_request_url: removalBatch.github_pr_url,
+        }
+      : null,
   });
 }
 

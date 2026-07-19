@@ -568,7 +568,7 @@ function openReportDecision(reportId: string, decision: "upheld" | "dismissed") 
   text(
     "#report-decision-description",
     upheld
-      ? "This immediately suppresses the reported listing from the public index. Confirm only after checking the evidence."
+      ? "This immediately suppresses the listing and queues validated removal from the public Git dataset. Confirm only after checking the evidence."
       : "The report will be dismissed and the listing will remain public.",
   );
   const submit = element<HTMLButtonElement>("#report-decision-submit");
@@ -920,7 +920,9 @@ element<HTMLFormElement>("#report-decision-form").addEventListener(
     if (!reportId || !["upheld", "dismissed"].includes(decision)) return;
     if (
       decision === "upheld" &&
-      !confirm("Remove the reported listing from the public index?")
+      !confirm(
+        "Suppress this listing and queue its removal from PerkCommons/data?",
+      )
     )
       return;
     try {

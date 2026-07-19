@@ -62,9 +62,17 @@ removed state for Git-backed listings, explicit report decisions with notes,
 and transactional rejected-submission cleanup. Apply it before deploying the
 corresponding workspace and Worker changes.
 
-Approval does not publish a listing. A later trusted integration can read
-`normalized_opportunities` and prepare a draft pull request for
-`PerkCommons/data`.
+Migration `202607190002_automated_publication.sql` adds private publication
+batches and items plus transactional claim and finalization functions. Apply
+it before enabling the Approved-queue publication control.
+
+Approval and publication remain separate decisions. An administrator can use
+**Publish all approved** to claim every approved normalized submission in one
+batch. The Worker writes one branch and pull request in `PerkCommons/data`.
+Its two-minute scheduled reconciler waits for the data repository's `validate`
+check, merges only a successful head commit, marks the corresponding Supabase
+submissions `published`, and dispatches the site's production deployment.
+Retries reuse an active batch and never create duplicate publication actions.
 
 ## Moderator setup
 
@@ -117,6 +125,8 @@ SUPABASE_PUBLISHABLE_KEY
 SUPABASE_SERVICE_ROLE_KEY
 SUBMISSION_FINGERPRINT_SECRET
 TURNSTILE_SECRET_KEY (optional)
+GITHUB_DATA_PUBLICATION_TOKEN
+GITHUB_SITE_DEPLOY_TOKEN
 ```
 
 Configure production secrets with:
@@ -127,10 +137,27 @@ npx wrangler secret put SUPABASE_PUBLISHABLE_KEY
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 npx wrangler secret put SUBMISSION_FINGERPRINT_SECRET
 npx wrangler secret put TURNSTILE_SECRET_KEY
+npx wrangler secret put GITHUB_DATA_PUBLICATION_TOKEN
+npx wrangler secret put GITHUB_SITE_DEPLOY_TOKEN
 ```
 
 Generate `SUBMISSION_FINGERPRINT_SECRET` with at least 32 random bytes. Never
 reuse it for another application purpose.
+
+Use two separate fine-grained GitHub tokens:
+
+- `GITHUB_DATA_PUBLICATION_TOKEN`: select only `PerkCommons/data`; grant
+  repository **Contents: Read and write** and **Pull requests: Read and write**.
+- `GITHUB_SITE_DEPLOY_TOKEN`: select only `PerkCommons/site`; grant repository
+  **Actions: Read and write**.
+
+Set expirations and rotate both tokens. Never use a broad classic personal
+access token. The data repository must continue to require pull requests and
+the strict `validate` status check. Because moderator approval is the human
+editorial decision and the organization currently has one active maintainer,
+set required GitHub approving reviews to zero for `data/main`; otherwise the
+automated merge will remain blocked after validation. Keep force pushes,
+deletions, and direct pushes disabled.
 
 ## Country and fingerprint behavior
 
@@ -256,6 +283,8 @@ POST   /api/moderation/bans
 DELETE /api/moderation/bans/:id
 GET    /api/moderation/moderators
 POST   /api/moderation/moderators
+GET    /api/moderation/publications
+POST   /api/moderation/publications
 ```
 
 All payloads are size-limited and validated. Errors use a consistent
@@ -278,6 +307,13 @@ or neither.
 
 - [ ] Review and apply `202607190001_moderation_workspace.sql` after the
       existing moderation and retention migrations.
+- [ ] Apply `202607190002_automated_publication.sql`.
+- [ ] Merge the matching `PerkCommons/data` schema-limit update.
+- [ ] Configure the two fine-grained GitHub publication secrets.
+- [ ] Keep the data `validate` check required and set required approving
+      reviews to zero so moderator-approved batches can merge automatically.
+- [ ] Confirm the `*/2 * * * *` publication reconciliation trigger in
+      Cloudflare Workers.
 - [ ] Create the first Auth user and administrator profile.
 - [ ] Set all Cloudflare build variables and Worker runtime secrets.
 - [ ] Configure Turnstile and confirm the `SUBMISSION_RATE_LIMITER` binding.

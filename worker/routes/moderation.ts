@@ -7,6 +7,10 @@ import {
 import { maskEmail } from "../lib/fingerprints";
 import { actionAllowedForStatus } from "../lib/moderation-policy";
 import {
+  publicationBatchStatus,
+  startPublicationBatch,
+} from "../lib/publication";
+import {
   apiError,
   assertSameOrigin,
   json,
@@ -425,6 +429,30 @@ export async function purgeRejected(
     p_submission_id: id,
   });
   return json({ message: `${count} rejected submission${count === 1 ? "" : "s"} deleted.`, count });
+}
+
+export async function publications(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  const administrator = await requireModerator(request, env, "admin");
+  if (request.method === "GET") return json(await publicationBatchStatus(env));
+  assertSameOrigin(request);
+  const batch = await startPublicationBatch(env, administrator);
+  if (!batch)
+    return json({
+      message: "There are no approved submissions ready to publish.",
+      batch: null,
+      approved_count: 0,
+    });
+  return json(
+    {
+      message: `${batch.item_count} approved submission${batch.item_count === 1 ? "" : "s"} queued for validated publication.`,
+      batch,
+      approved_count: batch.item_count,
+    },
+    202,
+  );
 }
 
 export async function moderators(

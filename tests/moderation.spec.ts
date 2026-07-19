@@ -465,8 +465,69 @@ test("queue controls match the allowed state transitions", async ({ page }) => {
   );
   await expect(page.locator("#review-actions")).toBeHidden();
   await expect(page.locator("#review-card")).toBeHidden();
+  await expect(page.getByRole("button", { name: /Publish all/ })).toBeHidden();
   await page.keyboard.press("d");
   await expect(page.getByRole("dialog", { name: "Decline submission" })).toBeHidden();
+});
+
+test("administrators can publish the complete approved queue as one batch", async ({
+  page,
+}) => {
+  await mockModeration(page, { role: "admin" });
+  let started = false;
+  let posted = 0;
+  await page.route("**/api/moderation/publications", async (route) => {
+    if (route.request().method() === "POST") {
+      posted += 1;
+      started = true;
+      await route.fulfill({
+        status: 202,
+        contentType: "application/json",
+        body: JSON.stringify({
+          message: "2 approved submissions queued for validated publication.",
+          approved_count: 2,
+          batch: {
+            id: "33333333-3333-4333-8333-333333333333",
+            status: "validating",
+            item_count: 2,
+            github_pr_url: "https://github.com/PerkCommons/data/pull/12",
+            last_error_code: null,
+            deployment_requested_at: null,
+          },
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        approved_count: 2,
+        batch: started
+          ? {
+              id: "33333333-3333-4333-8333-333333333333",
+              status: "validating",
+              item_count: 2,
+              github_pr_url: "https://github.com/PerkCommons/data/pull/12",
+              last_error_code: null,
+              deployment_requested_at: null,
+            }
+          : null,
+      }),
+    });
+  });
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.goto("/moderate/");
+  await page.getByRole("button", { name: "Approved" }).click();
+  const publish = page.getByRole("button", { name: "Publish all 2 approved" });
+  await expect(publish).toBeVisible();
+  await publish.click();
+  await expect.poll(() => posted).toBe(1);
+  await expect(page.getByRole("button", { name: "Publishing 2 approved" })).toBeDisabled();
+  await expect(page.getByRole("link", { name: "Open data pull request" })).toHaveAttribute(
+    "href",
+    "https://github.com/PerkCommons/data/pull/12",
+  );
 });
 
 test("reports support upheld and dismissed decisions with moderator notes", async ({

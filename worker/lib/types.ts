@@ -14,6 +14,8 @@ export interface Env {
   SUPABASE_PUBLISHABLE_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   SUBMISSION_FINGERPRINT_SECRET: string;
+  GITHUB_DATA_PUBLICATION_TOKEN?: string;
+  GITHUB_SITE_DEPLOY_TOKEN?: string;
   TURNSTILE_SECRET_KEY?: string;
   SUBMISSION_RATE_LIMITER?: {
     limit(options: { key: string }): Promise<{ success: boolean }>;

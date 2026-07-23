@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
-    "@supabase/supabase-js": "^2.110.7",
+    "@supabase/supabase-js": "^2.110.8",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.1.0",
     "lucide-astro": "^0.556.0",

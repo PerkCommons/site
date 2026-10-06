@@ -1,8 +1,8 @@
 # Security and privacy version 2
 
-This fork preserves HttpOnly/Secure/SameSite cookies, same-origin mutation checks, role checks, service-role isolation, keyed IP/email/user-agent fingerprints and private-table boundaries.
+The canonical site preserves HttpOnly/Secure/SameSite cookies, same-origin mutation checks, role checks, service-role isolation, keyed IP/email/user-agent fingerprints and private-table boundaries.
 
-## Implemented fork controls
+## Implemented controls
 
 - One central Worker response wrapper sets CSP report-only, strict referrer policy, a restrictive permissions policy, nosniff, HSTS and COOP.
 - Production mode rejects one-sided Turnstile client/server configuration.
@@ -10,7 +10,7 @@ This fork preserves HttpOnly/Secure/SameSite cookies, same-origin mutation check
 - Edge tombstones precede cache and Supabase checks; a tombstoned detail route returns 410.
 - Tombstones are written before Git removal preparation when the isolated binding is configured.
 - The tracked production env file contains placeholders only.
-- Fork publication code targets `CodWasTaken/*`; the fork workflow has no deploy step or Cloudflare credential.
+- Publication code targets the canonical `PerkCommons/data` repository. Production releases stage and smoke-test a Vercel deployment before promotion; fork-only targeting remains an explicit opt-in safety mode.
 
 ## Session migration proposal
 

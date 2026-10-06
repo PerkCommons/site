@@ -1,9 +1,10 @@
-name: Fork deployment dry run
+name: Production release
+
 on:
   workflow_dispatch:
     inputs:
       data_sha:
-        description: Exact commit from CodWasTaken/data
+        description: Exact commit from PerkCommons/data
         required: true
         type: string
       schema_version:
@@ -16,49 +17,191 @@ on:
         required: true
         default: "1"
         type: string
+
 permissions:
   contents: read
+
 concurrency:
   group: perkcommons-production
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+  VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION }}
+
 jobs:
   validate:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out site release commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.sha }}
-      - uses: actions/checkout@v4
+          persist-credentials: false
+
+      - name: Check out exact data release commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          repository: CodWasTaken/data
+          repository: PerkCommons/data
           ref: ${{ inputs.data_sha }}
           path: .data
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+
+      - name: Verify immutable release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${{ inputs.data_sha }}" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test "$(git -C .data rev-parse HEAD)" = "${{ inputs.data_sha }}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm test
+
+      - name: Install site dependencies
+        run: npm ci
+
+      - name: Run unit and contract tests
+        run: npm test
         env:
           PUBLIC_SUPABASE_URL: https://example.invalid
           PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder
           PUBLIC_TURNSTILE_SITE_KEY: placeholder
-      - run: npm run build
+
+      - name: Build exact release candidate
+        run: npm run build
         env:
           PERKCOMMONS_DATA_REPOSITORY_PATH: ${{ github.workspace }}/.data
+          PERKCOMMONS_DATA_REF: ${{ inputs.data_sha }}
           PERKCOMMONS_DATA_SHA: ${{ inputs.data_sha }}
           PERKCOMMONS_SITE_SHA: ${{ github.sha }}
+          PERKCOMMONS_RELEASE_CANDIDATE: "1"
+          PUBLIC_SITE_URL: https://perkcommons.com
           PUBLIC_SUPABASE_URL: https://example.invalid
           PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder
           PUBLIC_TURNSTILE_SITE_KEY: placeholder
-      - run: npx wrangler deploy --dry-run --outdir .wrangler-dry-run
-      - name: Verify exact-version metadata and static assets
+
+      - name: Verify release metadata and static assets
+        shell: bash
         run: |
+          set -euo pipefail
           test -f dist/data/opportunities.json
           test -f dist/catalog-index.json
           test -f dist/sitemap-index.xml
           grep -q '${{ inputs.data_sha }}' dist/data/opportunities.json
           grep -q '"schemaVersion":"${{ inputs.schema_version }}"' dist/data/opportunities.json
           grep -q '"taxonomyVersion":"${{ inputs.taxonomy_version }}"' dist/data/opportunities.json
-      - name: Confirm no deployment occurred
-        run: echo "Dry run complete. No Cloudflare credentials were loaded and no deployment was triggered."
+
+      - name: Audit built site
+        run: npm run audit:site
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser regression tests
+        run: npm run test:browser
+        env:
+          PERKCOMMONS_DATA_REPOSITORY_PATH: ${{ github.workspace }}/.data
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      deployment_url: ${{ steps.stage.outputs.url }}
+    steps:
+      - name: Check out site release commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Check out exact data release commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: PerkCommons/data
+          ref: ${{ inputs.data_sha }}
+          path: .data
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install site dependencies
+        run: npm ci
+
+      - name: Verify Vercel release configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${VERCEL_ORG_ID:?Set repository variable VERCEL_ORG_ID}"
+          : "${VERCEL_PROJECT_ID:?Set repository variable VERCEL_PROJECT_ID}"
+          : "${VERCEL_CLI_VERSION:?Set repository variable VERCEL_CLI_VERSION}"
+
+      - name: Install pinned Vercel CLI
+        run: npm install -g "vercel@${VERCEL_CLI_VERSION}"
+
+      - name: Pull Vercel production environment
+        run: vercel pull --yes --environment=production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build production artifact
+        run: vercel build --prod
+        env:
+          PERKCOMMONS_DATA_REPOSITORY_PATH: ${{ github.workspace }}/.data
+          PERKCOMMONS_DATA_REF: ${{ inputs.data_sha }}
+          PERKCOMMONS_DATA_SHA: ${{ inputs.data_sha }}
+          PERKCOMMONS_SITE_SHA: ${{ github.sha }}
+          PERKCOMMONS_RELEASE_CANDIDATE: "1"
+
+      - name: Stage production deployment without domains
+        id: stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_url="$(vercel deploy --prebuilt --prod --skip-domain)"
+          DEPLOYMENT_URL="$deployment_url" node --input-type=module -e '
+            const value = process.env.DEPLOYMENT_URL;
+            const url = new URL(value);
+            if (
+              url.protocol !== "https:" ||
+              url.origin !== value ||
+              !url.hostname.endsWith(".vercel.app")
+            ) process.exit(1);
+          '
+          printf 'url=%s\n' "$deployment_url" >> "$GITHUB_OUTPUT"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Smoke-test staged production deployment
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          : "${VERCEL_AUTOMATION_BYPASS_SECRET:?Configure the production environment bypass secret}"
+          for path in / /about/ /trust/ /privacy/ /data-quality/; do
+            status="$(
+              curl --silent --show-error --output /dev/null                 --max-redirs 0                 --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}"                 --write-out '%{http_code}'                 "${DEPLOYMENT_URL}${path}"
+            )"
+            case "$status" in
+              2??) ;;
+              *) echo "Smoke test failed for ${path}: HTTP ${status}" >&2; exit 1 ;;
+            esac
+          done
+
+      - name: Promote tested production deployment
+        run: vercel promote "${DEPLOYMENT_URL}"
+        env:
+          DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

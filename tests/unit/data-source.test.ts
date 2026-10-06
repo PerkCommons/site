@@ -14,34 +14,34 @@ test("exact data refs distinguish immutable commits from branches", () => {
   assert.equal(isExactCommitRef("4168039"), false);
 });
 
-test("Vercel defaults to the CodWasTaken data repository", () => {
+test("Vercel defaults to the canonical PerkCommons data repository", () => {
   const source = resolveDataSource({ VERCEL: "1" });
-  assert.equal(source.repository, "https://github.com/CodWasTaken/data.git");
+  assert.equal(source.repository, "https://github.com/PerkCommons/data.git");
   assert.equal(source.ref, "main");
 });
 
-test("Vercel rejects an explicit attempt to use the original data repository", () => {
+test("Vercel rejects an explicit attempt to use a non-canonical data repository", () => {
   assert.throws(
     () =>
       resolveDataSource({
         VERCEL: "1",
         PERKCOMMONS_DATA_REPOSITORY:
-          "https://github.com/PerkCommons/data.git",
+          "https://github.com/CodWasTaken/data.git",
         PERKCOMMONS_DATA_REF: "main",
       }),
-    /restricted to CodWasTaken\/data/i,
+    /canonical PerkCommons\/data/i,
   );
 });
 
-test("Vercel allows an exact commit pin inside the approved data repository", () => {
+test("Vercel allows an exact commit pin inside the canonical data repository", () => {
   const sha = "db80383717ded0e29af497d36894c52bde8a01fa";
   const source = resolveDataSource({
     VERCEL: "1",
     PERKCOMMONS_DATA_REPOSITORY:
-      "https://github.com/CodWasTaken/data.git",
+      "https://github.com/PerkCommons/data.git",
     PERKCOMMONS_DATA_REF: sha,
   });
-  assert.equal(source.repository, "https://github.com/CodWasTaken/data.git");
+  assert.equal(source.repository, "https://github.com/PerkCommons/data.git");
   assert.equal(source.ref, sha);
 });
 

@@ -41,8 +41,8 @@ test("base structured data links the site, project repositories, and supported c
   const module = await loadSeo();
   assert.ok(module);
   const json = JSON.stringify(module.baseStructuredData(new URL("https://preview.example/")));
-  assert.match(json, /https:\/\/github\.com\/CodWasTaken\/site/);
-  assert.match(json, /https:\/\/github\.com\/CodWasTaken\/data/);
+  assert.match(json, /https:\/\/github\.com\/PerkCommons\/site/);
+  assert.match(json, /https:\/\/github\.com\/PerkCommons\/data/);
   assert.match(json, /mailto:hello@perkcommons\.com/);
   assert.match(json, /Nataniel Bogacki/);
   assert.doesNotMatch(json, /operated by Cod from Poland/);

@@ -5,11 +5,11 @@
   "main": "./worker/index.ts",
   "workers_dev": true,
   "vars": {
-    "GITHUB_DATA_REPOSITORY": "CodWasTaken/data",
+    "GITHUB_DATA_REPOSITORY": "PerkCommons/data",
     "GITHUB_DATA_BRANCH": "main",
-    "GITHUB_HEAD_OWNER": "CodWasTaken",
-    "GITHUB_SITE_REPOSITORY": "CodWasTaken/site",
-    "FORK_ONLY_MODE": "true"
+    "GITHUB_HEAD_OWNER": "PerkCommons",
+    "GITHUB_SITE_REPOSITORY": "PerkCommons/site",
+    "FORK_ONLY_MODE": "false"
   },
   "assets": {
     "binding": "ASSETS",

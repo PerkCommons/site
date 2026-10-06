@@ -4,10 +4,10 @@ Legend: `[ ]` not started, `[~]` in progress, `[x]` implemented, `[t]` tested, `
 
 ## Safety and audit
 
-- [t] Fork ownership and parent relationships verified through GitHub.
-- [t] Fork `origin` and push-disabled official `upstream` verified in five local clones.
-- [t] Clean baseline status/branch/remotes recorded before source edits.
-- [x] `FORK_SAFETY.md` added to each fork.
+- [t] Historical fork ownership and parent relationships verified through GitHub.
+- [t] On 2026-10-06, official `PerkCommons/site` and `PerkCommons/data` were fast-forwarded to the verified fork heads without rewriting history.
+- [t] Local canonical remotes now point to the official repositories; personal forks are retained only as historical references.
+- [x] `FORK_SAFETY.md` now records the completed repository migration.
 - [t] Baseline data tests (5) and site unit tests (29) executed before implementation.
 - [x] Current flows, boundaries and risks documented.
 
@@ -54,8 +54,8 @@ Legend: `[ ]` not started, `[~]` in progress, `[x]` implemented, `[t]` tested, `
 - [t] Edge tombstones take precedence over cache/Supabase and return 410.
 - [t] Removal preparation writes a tombstone before Git preparation when the binding exists.
 - [t] Publication and removal cron reconciliation use `Promise.allSettled`.
-- [x] Fork automation targets `CodWasTaken/*`; official repositories are not automation targets.
-- [t] Fork workflow accepts exact data SHA and performs credential-free build plus Wrangler dry run only.
+- [x] Production automation targets `PerkCommons/*`; the legacy fork-only guard is opt-in.
+- [t] Production release workflow accepts an exact data SHA, validates the site/data pair, stages a Vercel production deployment without domains, smoke-tests it, and promotes only the tested build.
 - [t] Named `dev` Worker uses a distinct `workers.dev` target, test-only rate-limit namespaces, no route, no cron and no GitHub automation secrets.
 - [t] Static-asset `_headers` policy matches Worker responses; local runtime probe confirmed all six headers on the homepage.
 - [t] Isolated Worker deployed to `perkcommons-next-fork-dev.cod3eater.workers.dev`; hosted homepage, listing, catalogue API, sitemap, Supabase state and 404 smoke checks passed.
@@ -96,4 +96,4 @@ Legend: `[ ]` not started, `[~]` in progress, `[x]` implemented, `[t]` tested, `
 - [~] Site dependency audit reports three high-severity development-tool findings through Wrangler/Miniflare `sharp`; npm offers only an unsafe Wrangler downgrade, so this remains registered.
 - [ ] Manual Firefox/WebKit, forced-colors, screen-reader and 400% zoom review.
 
-As of the 2026-09-29 promotion work, Supabase project `fspdxfhijtlebdnftkof` is the authorized canonical PerkCommons backend and has been reconciled/hardened in place. `perkcommons.com` has not been cut over. Vercel hosted release-candidate verification remains required before main/domain promotion.
+As of 2026-10-06, Supabase project `fspdxfhijtlebdnftkof` is the canonical backend, `PerkCommons/site` and `PerkCommons/data` are canonical source repositories, and `perkcommons.com` is live on Vercel. Future releases use the staged Vercel workflow documented in `docs/DEPLOYMENT_V2.md`.

@@ -1,5 +1,7 @@
 # PerkCommons Next promotion handoff
 
+> **Superseded operational state — 2026-10-06:** `PerkCommons/site` and `PerkCommons/data` are now the canonical repositories, `perkcommons.com` is live on Vercel, and the fork-only deployment notes below are retained as historical migration evidence. Current release behavior is documented in `docs/DEPLOYMENT_V2.md`.
+
 Originally prepared 2026-07-24 and reconciled for the authorized main-promotion release candidate on 2026-09-29. The release candidate remains non-canonical on the public web until hosted Vercel verification and the later `perkcommons.com` cutover are complete.
 
 ## Completed work

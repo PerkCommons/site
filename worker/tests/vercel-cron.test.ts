@@ -13,10 +13,10 @@ const env = (): Env => ({
   SUPABASE_SERVICE_ROLE_KEY: "service",
   SUBMISSION_FINGERPRINT_SECRET: "fingerprint-secret",
   CRON_SECRET: "secret",
-  GITHUB_DATA_REPOSITORY: "CodWasTaken/data",
+  GITHUB_DATA_REPOSITORY: "PerkCommons/data",
   GITHUB_DATA_BRANCH: "main",
-  GITHUB_HEAD_OWNER: "CodWasTaken",
-  FORK_ONLY_MODE: "true",
+  GITHUB_HEAD_OWNER: "PerkCommons",
+  FORK_ONLY_MODE: "false",
 });
 
 test("cron rejects missing credentials", () => {

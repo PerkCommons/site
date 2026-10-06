@@ -99,8 +99,8 @@ test("llms.txt identifies canonical public data and provenance entry points", as
   assert.match(llms, /review state/i);
   assert.match(llms, /\/api\/v1\/opportunities/);
   assert.match(llms, /\/data\/opportunities\.json/);
-  assert.match(llms, /CodWasTaken\/site/);
-  assert.match(llms, /CodWasTaken\/data/);
+  assert.match(llms, /PerkCommons\/site/);
+  assert.match(llms, /PerkCommons\/data/);
 });
 
 test("social preview is a 1200x630 PNG", async () => {

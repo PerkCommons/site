@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
-          repository: CodWasTaken/data
+          repository: PerkCommons/data
           ref: 56b4ea62db2977c2d83b638b0b59ebb702a0d87b
           path: .data
       - name: Verify canonical data snapshot

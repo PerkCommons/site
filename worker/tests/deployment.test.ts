@@ -20,17 +20,14 @@ test("fork-only mode refuses original organization repositories", () => {
   );
 });
 
-test("fork target config resolves CodWasTaken data", () => {
+test("default target config resolves canonical PerkCommons data", () => {
   const config = githubTargetConfig({
-    GITHUB_DATA_REPOSITORY: "CodWasTaken/data",
-    GITHUB_DATA_BRANCH: "main",
-    GITHUB_HEAD_OWNER: "CodWasTaken",
-    FORK_ONLY_MODE: "true",
+    FORK_ONLY_MODE: "false",
   } as Env);
   assert.deepEqual(config, {
-    dataRepository: "CodWasTaken/data",
+    dataRepository: "PerkCommons/data",
     dataBranch: "main",
-    headOwner: "CodWasTaken",
+    headOwner: "PerkCommons",
   });
 });
 

@@ -1,6 +1,6 @@
 # Opportunity schema version 2
 
-The canonical source is `CodWasTaken/data/schema/opportunity-v2.model.json`. Do not hand-edit generated copies in the site. Run `npm run generate` in the data fork and `npm run generate:check` in review.
+The canonical source is `PerkCommons/data/schema/opportunity-v2.model.json`. Do not hand-edit generated copies in the site. Run `npm run generate` in the data repository and `npm run generate:check` in review.
 
 Generated artifacts:
 

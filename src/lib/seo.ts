@@ -23,8 +23,8 @@ export const baseStructuredData = (site: URL): unknown[] => {
         "Open-source opportunity directory operated by Nataniel Bogacki from Poland.",
       areaServed: "Worldwide",
       sameAs: [
-        "https://github.com/CodWasTaken/site",
-        "https://github.com/CodWasTaken/data",
+        "https://github.com/PerkCommons/site",
+        "https://github.com/PerkCommons/data",
       ],
       contactPoint: [
         {

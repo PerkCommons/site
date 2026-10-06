@@ -3,7 +3,7 @@ import { RequestError } from "./http.js";
 import { dispatchSiteDeployment } from "./publication-github.js";
 import type { Env } from "./types.js";
 
-const defaultSiteRepository = "CodWasTaken/site";
+const defaultSiteRepository = "PerkCommons/site";
 
 export const siteDeploymentConfigured = (env: Env): boolean =>
   Boolean(env.VERCEL_DEPLOY_HOOK_URL || env.GITHUB_SITE_DEPLOY_TOKEN);

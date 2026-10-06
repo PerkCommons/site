@@ -24,7 +24,7 @@ export function assertForkOnlyRepository(
 }
 
 export function githubTargetConfig(env: Env): GithubTargetConfig {
-  const dataRepository = env.GITHUB_DATA_REPOSITORY ?? "CodWasTaken/data";
+  const dataRepository = env.GITHUB_DATA_REPOSITORY ?? "PerkCommons/data";
   const dataBranch = env.GITHUB_DATA_BRANCH ?? "main";
   const headOwner =
     env.GITHUB_HEAD_OWNER ?? dataRepository.split("/")[0] ?? "";

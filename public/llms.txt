@@ -13,7 +13,7 @@ PerkCommons is an open, evidence-led directory of opportunities. Public records 
 
 ## Source and provenance
 
-- Site source: https://github.com/CodWasTaken/site
-- Public data: https://github.com/CodWasTaken/data
+- Site source: https://github.com/PerkCommons/site
+- Public data: https://github.com/PerkCommons/data
 
 Published directory records should be interpreted with their source URLs, review state, and provenance. A source check does not guarantee eligibility, availability, safety, acceptance, or outcome. This file is an index to public project resources; it does not grant additional copyright, licensing, crawling, or AI-training rights beyond the rights that apply to the referenced material.

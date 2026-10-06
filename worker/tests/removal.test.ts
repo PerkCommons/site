@@ -18,11 +18,11 @@ const env = {
   SUBMISSION_FINGERPRINT_SECRET: "fingerprint-secret",
   GITHUB_DATA_PUBLICATION_TOKEN: "data-publication-token",
   GITHUB_SITE_DEPLOY_TOKEN: "site-deploy-token",
-  GITHUB_DATA_REPOSITORY: "CodWasTaken/data",
+  GITHUB_DATA_REPOSITORY: "PerkCommons/data",
   GITHUB_DATA_BRANCH: "main",
-  GITHUB_HEAD_OWNER: "CodWasTaken",
-  GITHUB_SITE_REPOSITORY: "CodWasTaken/site",
-  FORK_ONLY_MODE: "true",
+  GITHUB_HEAD_OWNER: "PerkCommons",
+  GITHUB_SITE_REPOSITORY: "PerkCommons/site",
+  FORK_ONLY_MODE: "false",
 } satisfies Env;
 
 const removalBatch = (
@@ -77,7 +77,7 @@ test("an upheld report creates a PR deleting only its stable listing file", asyn
       return Response.json(
         {
           number: 14,
-          html_url: "https://github.com/CodWasTaken/data/pull/14",
+          html_url: "https://github.com/PerkCommons/data/pull/14",
           state: "open",
           merged: false,
           merged_at: null,
@@ -105,8 +105,8 @@ test("an upheld report creates a PR deleting only its stable listing file", asyn
       },
     ]);
     assert.ok(patches.some((patch) => patch.status === "validating"));
-    assert.ok(requests.some((url) => url.includes("/repos/CodWasTaken/data/")));
-    assert.equal(requests.some((url) => url.includes("/repos/PerkCommons/")), false);
+    assert.ok(requests.some((url) => url.includes("/repos/PerkCommons/data/")));
+    assert.equal(requests.some((url) => url.includes("/repos/CodWasTaken/")), false);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -170,7 +170,7 @@ test("removal reconciliation waits for validation before merge and deployment", 
     if (url.endsWith("/pulls/14"))
       return Response.json({
         number: 14,
-        html_url: "https://github.com/CodWasTaken/data/pull/14",
+        html_url: "https://github.com/PerkCommons/data/pull/14",
         state: "open",
         merged: false,
         merged_at: null,
@@ -207,8 +207,8 @@ test("removal reconciliation waits for validation before merge and deployment", 
     assert.equal(merged, true);
     assert.equal(finalized, true);
     assert.equal(deployed, true);
-    assert.ok(requests.some((url) => url.includes("/repos/CodWasTaken/data/")));
-    assert.equal(requests.some((url) => url.includes("/repos/PerkCommons/")), false);
+    assert.ok(requests.some((url) => url.includes("/repos/PerkCommons/data/")));
+    assert.equal(requests.some((url) => url.includes("/repos/CodWasTaken/")), false);
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -1,28 +1,30 @@
-# PerkCommons Next fork safety record
+# PerkCommons repository migration record
 
-Recorded on 2026-07-22 before source implementation.
+The experimental fork phase ended on 2026-10-06. The canonical repositories are now:
 
-## Repository map
+- site: <https://github.com/PerkCommons/site>
+- data: <https://github.com/PerkCommons/data>
 
-| Local repository | Fork owner | Fork (`origin`) | Official read-only source (`upstream`) | Active branch |
-| --- | --- | --- | --- | --- |
-| `site/` | `CodWasTaken` | <https://github.com/CodWasTaken/site> | <https://github.com/PerkCommons/site> | `next/foundation` |
-| `site/.data/` | `CodWasTaken` | <https://github.com/CodWasTaken/data> | <https://github.com/PerkCommons/data> | `next/schema-v2` |
-| `data/` | `CodWasTaken` | <https://github.com/CodWasTaken/data> | <https://github.com/PerkCommons/data> | `next/schema-v2` |
-| `docs/` | `CodWasTaken` | <https://github.com/CodWasTaken/docs> | <https://github.com/PerkCommons/docs> | `next/governance` |
-| `branding/` | `CodWasTaken` | <https://github.com/CodWasTaken/branding> | <https://github.com/PerkCommons/branding> | `next/accessibility` |
+Both official `main` branches were fast-forwarded from the previously active
+`CodWasTaken/site` and `CodWasTaken/data` forks after verifying that the
+official branches were strict ancestors. No history was rewritten.
 
-GitHub reported each `CodWasTaken/*` repository as a fork whose parent is the corresponding `PerkCommons/*` repository. In every local clone, `origin` points to the fork. The official repository is configured as `upstream` for fetching, while its push URL is set to the invalid value `DISABLED`.
+The personal forks remain useful as historical fork-network references, but
+they are no longer canonical release or automation targets. Local site/data
+clones should use `PerkCommons/*` as `origin`. A separate read-only
+`fork` remote may point at `CodWasTaken/*` when historical comparison is
+useful.
 
-## Safety commitments
+## Current safety commitments
 
-- The official PerkCommons repositories are read-only and will not receive branches, commits, pushes, pull requests, settings changes, or workflow triggers.
-- No pull request will be opened against an official PerkCommons repository.
-- Production systems—including the production Cloudflare Worker, Supabase database, GitHub Actions configuration, secrets, and `perkcommons.com`—are untouched.
-- No production deployment will be triggered.
-- Development uses local mocks, placeholders, dry runs, and fork-isolated workflows only. Production credentials must not be used or copied into files, logs, fixtures, screenshots, commits, or documentation.
-- Transfer to an official repository requires a later, explicit authorization from the owner after Build Week.
-
-## Initial safety evidence
-
-Before source changes, `git remote -v`, `git status`, and `git branch --show-current` were run in all five clones. Each working tree was clean. The original official `origin` remotes were renamed to `upstream`, their push URLs were disabled, fork-owned `origin` remotes were added, and focused branches were created from the fork `main` branches.
+- Production publication and release automation targets only reviewed
+  `PerkCommons/*` repositories.
+- `FORK_ONLY_MODE` remains available as an explicit opt-in safety guard for
+  isolated testing; it is not the production default.
+- Production releases use exact site/data commits, stage a Vercel production
+  deployment without assigning domains, smoke-test that exact deployment, and
+  promote only after the checks pass.
+- Production credentials stay in protected platform secrets. They must not be
+  copied into repository files, logs, fixtures, screenshots, or documentation.
+- Historical fork-era plans and specs remain unchanged where they document the
+  state that existed at the time.

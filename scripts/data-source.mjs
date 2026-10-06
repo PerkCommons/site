@@ -1,5 +1,5 @@
 const VERCEL_DATA_REPOSITORY =
-  "https://github.com/CodWasTaken/data.git";
+  "https://github.com/PerkCommons/data.git";
 const VERCEL_DEFAULT_REF = "main";
 
 export function isExactCommitRef(ref) {
@@ -7,8 +7,8 @@ export function isExactCommitRef(ref) {
 }
 
 /**
- * Resolve the public data source without allowing builds to drift to the
- * original PerkCommons organization. Release builds may pin an exact commit.
+ * Resolve the canonical public data source. Release builds may pin an exact
+ * commit so the deployed site and dataset are reproducible.
  *
  * @param {Record<string, string | undefined>} env
  * @returns {{ repository: string, ref: string | undefined }}
@@ -26,17 +26,12 @@ export function resolveDataSource(env = process.env) {
 
   if (!repository) {
     throw new Error(
-      "Set PERKCOMMONS_DATA_REPOSITORY to the CodWasTaken data repository.",
-    );
-  }
-  if (/github\.com[/:]PerkCommons\//i.test(repository)) {
-    throw new Error(
-      "Vercel builds are restricted to CodWasTaken/data; original PerkCommons repositories are not accepted.",
+      "Set PERKCOMMONS_DATA_REPOSITORY to the PerkCommons data repository.",
     );
   }
   if (isVercel && repository !== VERCEL_DATA_REPOSITORY) {
     throw new Error(
-      "Vercel builds are restricted to CodWasTaken/data.",
+      "Vercel builds are restricted to the canonical PerkCommons/data repository.",
     );
   }
   if (

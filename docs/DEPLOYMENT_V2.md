@@ -1,36 +1,50 @@
 # Deployment version 2
 
-The automated workflow on this branch is a fork dry run. It must not be configured with production Cloudflare credentials and never calls a live deploy command. Manual development testing uses only the named `dev` Wrangler environment, whose Worker name is `perkcommons-next-fork-dev`, with `workers.dev` enabled, no custom-domain route, no cron triggers and test-only rate-limit namespaces.
+PerkCommons production is hosted on Vercel. The canonical source repositories
+are `PerkCommons/site` and `PerkCommons/data`.
 
-Local Worker secrets belong in ignored `.dev.vars.dev`; hosted development secrets must be written with `wrangler secret put <NAME> --env dev`. GitHub publication/deployment tokens are intentionally absent. The official Worker, routes, credentials and `perkcommons.com` are out of scope.
+## Immutable release inputs
 
-## Required immutable inputs
+A production release is manually dispatched from `PerkCommons/site@main` with
+an exact 40-character `PerkCommons/data` commit SHA. The workflow validates
+the site commit, data commit, schema/taxonomy metadata, static assets, site
+quality audit, and browser regression suite before any Vercel deployment is
+created.
 
-Every build records site commit SHA, data commit SHA, schema version, taxonomy version and generated timestamp. A future deployment record must also persist minimum migration and exact artifact digest. `data/opportunities.json` exposes the current metadata for smoke verification.
+## Vercel release flow
 
-The fork workflow accepts an exact `CodWasTaken/data` SHA, checks out the triggering site SHA, builds, runs `wrangler deploy --dry-run`, verifies required assets and expected metadata, and uses concurrency group `perkcommons-production` with cancellation. The production-like group name tests ordering semantics only; the job has no credentials and cannot deploy.
+The release workflow:
 
-## Target state machine
+1. checks out the exact site and data revisions;
+2. pulls the Vercel production configuration;
+3. builds the production artifact with the exact data checkout;
+4. creates a production deployment with `--skip-domain`;
+5. smoke-tests the staged `*.vercel.app` deployment through Deployment Protection;
+6. promotes that same tested deployment to the production domains.
 
-`data_merged → deployment_queued → deployment_running → deployment_succeeded → verification_succeeded`, with `deployment_failed` possible from every active state. Persist run ID, started/completed times, site/data SHA, schema/taxonomy versions, artifact digest, verification time and structured failure reason. A newer run must never be overwritten by an older completion.
+The production concurrency group does not cancel an in-progress release, so a
+new dispatch cannot silently replace a release that is already staging or
+promoting.
 
-Publication and removal reconciliation are independent and use `Promise.allSettled`. Retrying one process must not block the other. Individual records and moderate batches require separate retry controls.
+## Required GitHub configuration
 
-## Required smoke checks for a future isolated preview
+Repository variables:
 
-- homepage 200;
-- changed listing 200;
-- tombstoned listing 410;
-- catalogue/facet/provider assets exist;
-- sitemap index and split sitemaps exist;
-- public export exposes expected data/site SHA and schema/taxonomy versions;
-- `/api/v1/opportunities` paginates deterministically;
-- security headers are present.
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+- `VERCEL_CLI_VERSION`
 
-## GitHub App proposal
+Protected environment secrets:
 
-Replace personal tokens with installation tokens. Proposed fork permissions: data contents read/write, pull requests read/write, checks read, metadata read; site Actions write only if exact-SHA dispatch remains necessary. No organization administration, secrets, deployments or member permissions. Installation in the official organization is forbidden without later explicit owner authorization.
+- `VERCEL_TOKEN`
+- `VERCEL_AUTOMATION_BYPASS_SECRET`
 
-## Later official adoption
+The `production` environment should use required reviewers and a deployment
+branch policy for `main` before the first automated release.
 
-Official adoption must use reviewed commits selected from the forks, a new production migration plan, a production KV namespace, GitHub App review, secret rotation, staging smoke tests and owner authorization. Do not change repository constants, workflow credentials or Worker name as an incidental cherry-pick.
+## Rollback
+
+Use Vercel rollback/promote against a previously verified production deployment.
+Do not rebuild merely to roll back: rollback should restore an already known
+artifact. After any rollback, scan production logs and verify the apex/www
+routes, catalogue/API, sitemap, security headers, and exact release metadata.

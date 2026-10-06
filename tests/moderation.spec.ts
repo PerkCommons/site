@@ -214,7 +214,7 @@ test("pending card renders evidence, country tooltip, links, and copy controls",
   ).toHaveAttribute("target", "_blank");
   await expect(
     page.getByRole("link", { name: "Check PerkCommons duplicates" }),
-  ).toHaveAttribute("href", /github\.com\/CodWasTaken\/data\/search/);
+  ).toHaveAttribute("href", /github\.com\/PerkCommons\/data\/search/);
   await expect(
     page.getByRole("button", { name: "Abuse controls" }),
   ).toBeHidden();

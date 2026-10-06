@@ -348,7 +348,7 @@ function renderSubmission() {
   element<HTMLAnchorElement>("#search-domain").href =
     `https://www.google.com/search?q=${encodeURIComponent(`site:${sourceDomain}`)}`;
   element<HTMLAnchorElement>("#check-duplicates").href =
-    `https://github.com/CodWasTaken/data/search?q=${encodeURIComponent(submission.name)}&type=code`;
+    `https://github.com/PerkCommons/data/search?q=${encodeURIComponent(submission.name)}&type=code`;
   element<HTMLAnchorElement>("#research-source").href = submission.source_url;
   element<HTMLAnchorElement>("#research-source").textContent =
     `Open official source · ${sourceDomain}`;

@@ -10,7 +10,7 @@ The canonical site preserves HttpOnly/Secure/SameSite cookies, same-origin mutat
 - Edge tombstones precede cache and Supabase checks; a tombstoned detail route returns 410.
 - Tombstones are written before Git removal preparation when the isolated binding is configured.
 - The tracked production env file contains placeholders only.
-- Publication code targets the canonical `PerkCommons/data` repository. Production releases stage and smoke-test a Vercel deployment before promotion; fork-only targeting remains an explicit opt-in safety mode.
+- Publication code targets the canonical `PerkCommons/data` repository. Production releases validate exact site/data commits and deploy through the protected Cloudflare Workers release workflow; fork-only targeting remains an explicit opt-in safety mode.
 
 ## Session migration proposal
 

@@ -10,7 +10,7 @@ const expectedHeaders = [
 ] as const;
 
 test("deployed homepage and 404 responses expose the reviewed security headers", async ({ request }) => {
-  test.skip(!hostedBaseUrl, "Set PERKCOMMONS_HOSTED_BASE_URL to verify deployed Vercel headers.");
+  test.skip(!hostedBaseUrl, "Set PERKCOMMONS_HOSTED_BASE_URL to verify deployed production headers.");
 
   for (const [path, status] of [
     ["/", 200],

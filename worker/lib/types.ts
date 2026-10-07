@@ -26,7 +26,6 @@ export interface Env {
   GITHUB_HEAD_OWNER?: string;
   GITHUB_SITE_REPOSITORY?: string;
   FORK_ONLY_MODE?: string;
-  CRON_SECRET?: string;
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_SITE_KEY?: string;
   ENVIRONMENT?: "development" | "test" | "production";

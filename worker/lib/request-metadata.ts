@@ -9,8 +9,4 @@ export const requestClientIp = (request: Request): string | null =>
   );
 
 export const requestCountry = (request: Request): string | null =>
-  normalizeCountryCode(
-    request.headers.get("cf-ipcountry") ??
-      request.headers.get("x-vercel-ip-country") ??
-      null,
-  );
+  normalizeCountryCode(request.headers.get("cf-ipcountry"));

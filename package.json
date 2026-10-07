@@ -12,23 +12,21 @@
     "fetch:data": "node scripts/fetch-data.mjs",
     "sync:taxonomy": "node scripts/sync-taxonomy.mjs",
     "prebuild": "npm run fetch:data",
-    "build": "astro check && astro build && node scripts/postbuild-site-assets.mjs && pagefind --site dist && node scripts/generate-vercel-catalog.mjs",
+    "build": "astro check && astro build && node scripts/postbuild-site-assets.mjs && pagefind --site dist",
     "audit:site": "node scripts/audit-site-quality.mjs dist",
     "audit:sinks": "node scripts/audit-dangerous-sinks.mjs",
     "preview": "astro preview",
-    "check": "node scripts/sync-taxonomy.mjs --check && node scripts/build-greenfield-migration.mjs --check && npm run worker:types:check && npm run vercel:types:check && astro check && tsc --noEmit && tsc -p worker/tsconfig.json --noEmit && tsc -p worker/tests/tsconfig.json --noEmit && npm run audit:sinks",
+    "check": "node scripts/sync-taxonomy.mjs --check && node scripts/build-greenfield-migration.mjs --check && npm run worker:types:check && astro check && tsc --noEmit && tsc -p worker/tsconfig.json --noEmit && tsc -p worker/tests/tsconfig.json --noEmit && npm run audit:sinks",
     "greenfield:generate": "node scripts/build-greenfield-migration.mjs",
     "greenfield:check": "node scripts/build-greenfield-migration.mjs --check",
     "test": "npm run check && npm run test:unit",
     "test:unit": "tsx --test tests/unit/*.test.ts worker/tests/*.test.ts",
-    "test:browser": "playwright test",
-    "vercel:types:check": "tsc -p vercel/tsconfig.runtime.json --noEmit"
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
     "@supabase/supabase-js": "^2.117.2",
     "@tailwindcss/vite": "^4.3.3",
-    "@vercel/functions": "^3.9.11",
     "astro": "^7.3.5",
     "lucide-astro": "^0.556.0",
     "tailwindcss": "^4.3.3"

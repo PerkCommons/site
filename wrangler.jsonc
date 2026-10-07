@@ -1,11 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "perkcommons-next-fork",
+  "name": "perkcommons-site",
   "compatibility_date": "2026-07-22",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./worker/index.ts",
   "vars": {
-    "ENVIRONMENT": "development"
+    "ENVIRONMENT": "production",
+    "GITHUB_DATA_REPOSITORY": "PerkCommons/data",
+    "GITHUB_DATA_BRANCH": "main",
+    "GITHUB_HEAD_OWNER": "PerkCommons",
+    "GITHUB_SITE_REPOSITORY": "PerkCommons/site",
+    "FORK_ONLY_MODE": "false"
   },
   "triggers": {
     "crons": ["*/2 * * * *"]
@@ -54,11 +59,16 @@
   },
   "env": {
     "dev": {
-      "name": "perkcommons-next-fork-dev",
+      "name": "perkcommons-site-dev",
       "workers_dev": true,
       "preview_urls": true,
       "vars": {
-        "ENVIRONMENT": "test"
+        "ENVIRONMENT": "test",
+        "GITHUB_DATA_REPOSITORY": "PerkCommons/data",
+        "GITHUB_DATA_BRANCH": "main",
+        "GITHUB_HEAD_OWNER": "PerkCommons",
+        "GITHUB_SITE_REPOSITORY": "PerkCommons/site",
+        "FORK_ONLY_MODE": "false"
       },
       "secrets": {
         "required": [

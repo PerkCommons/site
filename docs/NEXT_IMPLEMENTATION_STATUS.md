@@ -55,7 +55,7 @@ Legend: `[ ]` not started, `[~]` in progress, `[x]` implemented, `[t]` tested, `
 - [t] Removal preparation writes a tombstone before Git preparation when the binding exists.
 - [t] Publication and removal cron reconciliation use `Promise.allSettled`.
 - [x] Production automation targets `PerkCommons/*`; the legacy fork-only guard is opt-in.
-- [t] Production release workflow accepts an exact data SHA, validates the site/data pair, stages a Vercel production deployment without domains, smoke-tests it, and promotes only the tested build.
+- [t] Production release workflow accepts an exact data SHA, validates the site/data pair, validates the Cloudflare Worker package, and deploys the tested artifact to the canonical `perkcommons-site` Worker.
 - [t] Named `dev` Worker uses a distinct `workers.dev` target, test-only rate-limit namespaces, no route, no cron and no GitHub automation secrets.
 - [t] Static-asset `_headers` policy matches Worker responses; local runtime probe confirmed all six headers on the homepage.
 - [t] Isolated Worker deployed to `perkcommons-next-fork-dev.cod3eater.workers.dev`; hosted homepage, listing, catalogue API, sitemap, Supabase state and 404 smoke checks passed.
@@ -96,4 +96,4 @@ Legend: `[ ]` not started, `[~]` in progress, `[x]` implemented, `[t]` tested, `
 - [~] Site dependency audit reports three high-severity development-tool findings through Wrangler/Miniflare `sharp`; npm offers only an unsafe Wrangler downgrade, so this remains registered.
 - [ ] Manual Firefox/WebKit, forced-colors, screen-reader and 400% zoom review.
 
-As of 2026-10-06, Supabase project `fspdxfhijtlebdnftkof` is the canonical backend, `PerkCommons/site` and `PerkCommons/data` are canonical source repositories, and `perkcommons.com` is live on Vercel. Future releases use the staged Vercel workflow documented in `docs/DEPLOYMENT_V2.md`.
+As of 2026-10-07, Supabase remains the canonical backend and `PerkCommons/site` plus `PerkCommons/data` are the canonical source repositories. Production hosting is being moved back to the canonical Cloudflare Worker `perkcommons-site`; the active release workflow is documented in `docs/DEPLOYMENT_V2.md`.

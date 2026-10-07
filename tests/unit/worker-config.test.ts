@@ -19,6 +19,7 @@ interface WorkerEnvironment {
 
 interface WranglerConfig {
   name: string;
+  vars?: Record<string, string>;
   ratelimits?: RateLimitConfig[];
   env?: Record<string, WorkerEnvironment>;
 }
@@ -31,10 +32,18 @@ const staticHeaders = await readFile(
   "utf8",
 );
 
+test("production Worker targets the official PerkCommons repositories", () => {
+  assert.equal(config.name, "perkcommons-site");
+  assert.equal(config.vars?.ENVIRONMENT, "production");
+  assert.equal(config.vars?.GITHUB_DATA_REPOSITORY, "PerkCommons/data");
+  assert.equal(config.vars?.GITHUB_SITE_REPOSITORY, "PerkCommons/site");
+  assert.equal(config.vars?.FORK_ONLY_MODE, "false");
+});
+
 test("development Worker is isolated from production routes and automation", () => {
   const development = config.env?.dev;
   assert.ok(development);
-  assert.equal(development.name, "perkcommons-next-fork-dev");
+  assert.equal(development.name, "perkcommons-site-dev");
   assert.equal(development.workers_dev, true);
   assert.equal(development.preview_urls, true);
   assert.equal(development.routes, undefined);

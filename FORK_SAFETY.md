@@ -21,9 +21,10 @@ useful.
   `PerkCommons/*` repositories.
 - `FORK_ONLY_MODE` remains available as an explicit opt-in safety guard for
   isolated testing; it is not the production default.
-- Production releases use exact site/data commits, stage a Vercel production
-  deployment without assigning domains, smoke-test that exact deployment, and
-  promote only after the checks pass.
+- Production releases use exact site/data commits, validate the Cloudflare
+  Worker package, and deploy the tested artifact to the canonical
+  `perkcommons-site` Worker through the protected GitHub `production`
+  environment.
 - Production credentials stay in protected platform secrets. They must not be
   copied into repository files, logs, fixtures, screenshots, or documentation.
 - Historical fork-era plans and specs remain unchanged where they document the

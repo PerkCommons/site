@@ -25,11 +25,6 @@ concurrency:
   group: perkcommons-production
   cancel-in-progress: false
 
-env:
-  VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
-  VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION }}
-
 jobs:
   validate:
     if: github.ref == 'refs/heads/main'
@@ -100,6 +95,9 @@ jobs:
       - name: Audit built site
         run: npm run audit:site
 
+      - name: Verify Cloudflare package
+        run: npx wrangler deploy --dry-run --outdir .wrangler/release-dry-run
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
@@ -112,8 +110,6 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     environment: production
-    outputs:
-      deployment_url: ${{ steps.stage.outputs.url }}
     steps:
       - name: Check out site release commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -138,70 +134,27 @@ jobs:
       - name: Install site dependencies
         run: npm ci
 
-      - name: Verify Vercel release configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-          : "${VERCEL_ORG_ID:?Set repository variable VERCEL_ORG_ID}"
-          : "${VERCEL_PROJECT_ID:?Set repository variable VERCEL_PROJECT_ID}"
-          : "${VERCEL_CLI_VERSION:?Set repository variable VERCEL_CLI_VERSION}"
-
-      - name: Install pinned Vercel CLI
-        run: npm install -g "vercel@${VERCEL_CLI_VERSION}"
-
-      - name: Pull Vercel production environment
-        run: vercel pull --yes --environment=production
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-
       - name: Build production artifact
-        run: vercel build --prod
+        run: npm run build
         env:
           PERKCOMMONS_DATA_REPOSITORY_PATH: ${{ github.workspace }}/.data
           PERKCOMMONS_DATA_REF: ${{ inputs.data_sha }}
           PERKCOMMONS_DATA_SHA: ${{ inputs.data_sha }}
           PERKCOMMONS_SITE_SHA: ${{ github.sha }}
           PERKCOMMONS_RELEASE_CANDIDATE: "1"
+          PUBLIC_SITE_URL: https://perkcommons.com
+          PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
 
-      - name: Stage production deployment without domains
-        id: stage
-        shell: bash
-        run: |
-          set -euo pipefail
-          deployment_url="$(vercel deploy --prebuilt --prod --skip-domain)"
-          DEPLOYMENT_URL="$deployment_url" node --input-type=module -e '
-            const value = process.env.DEPLOYMENT_URL;
-            const url = new URL(value);
-            if (
-              url.protocol !== "https:" ||
-              url.origin !== value ||
-              !url.hostname.endsWith(".vercel.app")
-            ) process.exit(1);
-          '
-          printf 'url=%s\n' "$deployment_url" >> "$GITHUB_OUTPUT"
+      - name: Deploy tested artifact to Cloudflare Workers
+        run: npx wrangler deploy --keep-vars
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Smoke-test staged production deployment
-        shell: bash
+      - name: Record Cloudflare deployment
+        run: npx wrangler deployments list --name perkcommons-site
         env:
-          DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
-          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-        run: |
-          set -euo pipefail
-          : "${VERCEL_AUTOMATION_BYPASS_SECRET:?Configure the production environment bypass secret}"
-          for path in / /about/ /trust/ /privacy/ /data-quality/; do
-            status="$(
-              curl --silent --show-error --output /dev/null                 --max-redirs 0                 --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}"                 --write-out '%{http_code}'                 "${DEPLOYMENT_URL}${path}"
-            )"
-            case "$status" in
-              2??) ;;
-              *) echo "Smoke test failed for ${path}: HTTP ${status}" >&2; exit 1 ;;
-            esac
-          done
-
-      - name: Promote tested production deployment
-        run: vercel promote "${DEPLOYMENT_URL}"
-        env:
-          DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

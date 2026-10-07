@@ -14,17 +14,16 @@ test("exact data refs distinguish immutable commits from branches", () => {
   assert.equal(isExactCommitRef("4168039"), false);
 });
 
-test("Vercel defaults to the canonical PerkCommons data repository", () => {
-  const source = resolveDataSource({ VERCEL: "1" });
+test("builds default to the canonical PerkCommons data repository", () => {
+  const source = resolveDataSource({});
   assert.equal(source.repository, "https://github.com/PerkCommons/data.git");
   assert.equal(source.ref, "main");
 });
 
-test("Vercel rejects an explicit attempt to use a non-canonical data repository", () => {
+test("builds reject an explicit non-canonical data repository", () => {
   assert.throws(
     () =>
       resolveDataSource({
-        VERCEL: "1",
         PERKCOMMONS_DATA_REPOSITORY:
           "https://github.com/CodWasTaken/data.git",
         PERKCOMMONS_DATA_REF: "main",
@@ -33,10 +32,9 @@ test("Vercel rejects an explicit attempt to use a non-canonical data repository"
   );
 });
 
-test("Vercel allows an exact commit pin inside the canonical data repository", () => {
+test("builds allow an exact commit pin inside the canonical data repository", () => {
   const sha = "db80383717ded0e29af497d36894c52bde8a01fa";
   const source = resolveDataSource({
-    VERCEL: "1",
     PERKCOMMONS_DATA_REPOSITORY:
       "https://github.com/PerkCommons/data.git",
     PERKCOMMONS_DATA_REF: sha,
@@ -45,21 +43,19 @@ test("Vercel allows an exact commit pin inside the canonical data repository", (
   assert.equal(source.ref, sha);
 });
 
-test("release Vercel builds require an explicit data commit pin", () => {
+test("release builds require an explicit data commit pin", () => {
   assert.throws(
     () =>
       resolveDataSource({
-        VERCEL: "1",
         PERKCOMMONS_RELEASE_CANDIDATE: "1",
       }),
     /PERKCOMMONS_DATA_REF.*exact.*commit/i,
   );
 });
 
-test("release Vercel builds accept a full data commit pin", () => {
+test("release builds accept a full data commit pin", () => {
   const sha = "879706e1021ae7f48736a0f98051685c08ca8d8e";
   const source = resolveDataSource({
-    VERCEL: "1",
     PERKCOMMONS_RELEASE_CANDIDATE: "1",
     PERKCOMMONS_DATA_REF: sha,
   });

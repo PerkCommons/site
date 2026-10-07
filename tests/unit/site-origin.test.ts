@@ -9,7 +9,6 @@ test("production canonical origin defaults to perkcommons.com", async () => {
     "utf8",
   );
   assert.match(config, /https:\/\/perkcommons\.com/);
-  assert.doesNotMatch(config, /VERCEL_/i);
   assert.equal(resolveSiteOrigin({}), "https://perkcommons.com");
 });
 

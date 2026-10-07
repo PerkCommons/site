@@ -63,8 +63,8 @@ export function vercelEnv(
   const siteRepository = optional(source, "GITHUB_SITE_REPOSITORY");
   if (siteRepository) env.GITHUB_SITE_REPOSITORY = siteRepository;
 
-  const deployHook = optional(source, "VERCEL_DEPLOY_HOOK_URL");
-  if (deployHook) env.VERCEL_DEPLOY_HOOK_URL = deployHook;
+  const siteDeployToken = optional(source, "GITHUB_SITE_DEPLOY_TOKEN");
+  if (siteDeployToken) env.GITHUB_SITE_DEPLOY_TOKEN = siteDeployToken;
 
   const cronSecret = optional(source, "CRON_SECRET");
   if (cronSecret) env.CRON_SECRET = cronSecret;

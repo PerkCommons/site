@@ -80,10 +80,12 @@ test("Vercel adapter maps production identity and Turnstile site key", () => {
     SUBMISSION_FINGERPRINT_SECRET: "0123456789abcdef0123456789abcdef",
     PUBLIC_TURNSTILE_SITE_KEY: "site-key",
     TURNSTILE_SECRET_KEY: "secret-key",
+    GITHUB_SITE_DEPLOY_TOKEN: "site-deploy-token",
   });
   assert.equal(result.ENVIRONMENT, "production");
   assert.equal(result.TURNSTILE_SITE_KEY, "site-key");
   assert.equal(result.TURNSTILE_SECRET_KEY, "secret-key");
+  assert.equal(result.GITHUB_SITE_DEPLOY_TOKEN, "site-deploy-token");
 });
 
 test("Vercel preview maps to development environment", () => {

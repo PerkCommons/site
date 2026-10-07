@@ -9,6 +9,8 @@ import type { Env } from "../lib/types";
 
 const reportId = "11111111-1111-4111-8111-111111111111";
 const batchId = "22222222-2222-4222-8222-222222222222";
+const baseDataSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const mergedDataSha = "cccccccccccccccccccccccccccccccccccccccc";
 
 const env = {
   ASSETS: { fetch: async () => new Response(null, { status: 404 }) },
@@ -115,7 +117,7 @@ test("an upheld report creates a PR deleting only its stable listing file", asyn
 test("an already absent listing completes idempotently and requests a rebuild", async () => {
   const originalFetch = globalThis.fetch;
   let finalized = false;
-  let deployed = false;
+  let deploymentBody: Record<string, unknown> | undefined;
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     const method = init?.method ?? "GET";
@@ -123,7 +125,7 @@ test("an already absent listing completes idempotently and requests a rebuild", 
       return Response.json([removalBatch()]);
     if (url.includes("/pulls?state=open")) return Response.json([]);
     if (url.endsWith("/git/ref/heads/main"))
-      return Response.json({ object: { sha: "base-sha" } });
+      return Response.json({ object: { sha: baseDataSha } });
     if (url.includes("/contents/opportunities/example-reported-opportunity.json"))
       return Response.json({ message: "Not Found" }, { status: 404 });
     if (url.endsWith("/rpc/finalize_listing_removal_batch")) {
@@ -131,7 +133,7 @@ test("an already absent listing completes idempotently and requests a rebuild", 
       return Response.json("example-reported-opportunity");
     }
     if (url.endsWith("/actions/workflows/deploy.yml/dispatches")) {
-      deployed = true;
+      deploymentBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
       return new Response(null, { status: 204 });
     }
     if (url.includes("listing_removal_batches?id=eq.") && method === "PATCH")
@@ -143,7 +145,10 @@ test("an already absent listing completes idempotently and requests a rebuild", 
     const batch = await prepareListingRemovalForReport(env, reportId);
     assert.equal(batch?.status, "removed");
     assert.equal(finalized, true);
-    assert.equal(deployed, true);
+    assert.deepEqual(deploymentBody, {
+      ref: "main",
+      inputs: { data_sha: baseDataSha },
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -154,7 +159,7 @@ test("removal reconciliation waits for validation before merge and deployment", 
   const requests: string[] = [];
   let merged = false;
   let finalized = false;
-  let deployed = false;
+  let deploymentBody: Record<string, unknown> | undefined;
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     const method = init?.method ?? "GET";
@@ -185,14 +190,14 @@ test("removal reconciliation waits for validation before merge and deployment", 
       });
     if (url.endsWith("/pulls/14/merge") && method === "PUT") {
       merged = true;
-      return Response.json({ merged: true, sha: "merge-sha" });
+      return Response.json({ merged: true, sha: mergedDataSha });
     }
     if (url.endsWith("/rpc/finalize_listing_removal_batch")) {
       finalized = true;
       return Response.json("example-reported-opportunity");
     }
     if (url.endsWith("/actions/workflows/deploy.yml/dispatches")) {
-      deployed = true;
+      deploymentBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
       return new Response(null, { status: 204 });
     }
     if (url.includes("listing_removal_batches?id=eq.") && method === "PATCH")
@@ -206,7 +211,10 @@ test("removal reconciliation waits for validation before merge and deployment", 
     await reconcileListingRemovals(env);
     assert.equal(merged, true);
     assert.equal(finalized, true);
-    assert.equal(deployed, true);
+    assert.deepEqual(deploymentBody, {
+      ref: "main",
+      inputs: { data_sha: mergedDataSha },
+    });
     assert.ok(requests.some((url) => url.includes("/repos/PerkCommons/data/")));
     assert.equal(requests.some((url) => url.includes("/repos/CodWasTaken/")), false);
   } finally {

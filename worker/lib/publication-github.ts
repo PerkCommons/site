@@ -356,12 +356,16 @@ export const mergeRemovalPullRequest = (
 export const dispatchSiteDeployment = (
   token: string | undefined,
   siteRepository: string,
+  dataSha: string,
 ) =>
   githubRequest(
     token,
     `/repos/${siteRepository}/actions/workflows/deploy.yml/dispatches`,
     {
       method: "POST",
-      body: JSON.stringify({ ref: "main" }),
+      body: JSON.stringify({
+        ref: "main",
+        inputs: { data_sha: dataSha },
+      }),
     },
   );

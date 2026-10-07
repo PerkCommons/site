@@ -68,6 +68,8 @@ const administrator: Moderator = {
   role: "admin",
 };
 
+const mergedDataSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
 test("publication data uses stable IDs and the public data schema", () => {
   const listingId = publicationListingId(payload);
   assert.equal(listingId, "example-foundation-open-infrastructure-grant-11111111");
@@ -291,7 +293,7 @@ test("reconciliation merges only after validation and then requests deployment",
   const rpcCalls: string[] = [];
   const requests: string[] = [];
   let mergeCalled = false;
-  let deploymentCalled = false;
+  let deploymentBody: Record<string, unknown> | undefined;
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     const method = init?.method ?? "GET";
@@ -329,14 +331,14 @@ test("reconciliation merges only after validation and then requests deployment",
       });
     if (url.endsWith("/pulls/12/merge") && method === "PUT") {
       mergeCalled = true;
-      return Response.json({ merged: true, sha: "merge-sha" });
+      return Response.json({ merged: true, sha: mergedDataSha });
     }
     if (url.endsWith("/rpc/finalize_publication_batch")) {
       rpcCalls.push(String(init?.body));
       return Response.json(1);
     }
     if (url.endsWith("/actions/workflows/deploy.yml/dispatches")) {
-      deploymentCalled = true;
+      deploymentBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
       return new Response(null, { status: 204 });
     }
     if (url.includes("publication_batches?id=eq.") && method === "PATCH")
@@ -349,9 +351,12 @@ test("reconciliation merges only after validation and then requests deployment",
   try {
     await reconcilePublicationBatches(env);
     assert.equal(mergeCalled, true);
-    assert.equal(deploymentCalled, true);
+    assert.deepEqual(deploymentBody, {
+      ref: "main",
+      inputs: { data_sha: mergedDataSha },
+    });
     assert.equal(rpcCalls.length, 1);
-    assert.match(rpcCalls[0] ?? "", /merge-sha/);
+    assert.match(rpcCalls[0] ?? "", new RegExp(mergedDataSha));
     assert.ok(requests.some((url) => url.includes("/repos/PerkCommons/data/")));
     assert.equal(requests.some((url) => url.includes("/repos/CodWasTaken/")), false);
   } finally {

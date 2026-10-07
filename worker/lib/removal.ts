@@ -46,8 +46,12 @@ const updateBatch = async (
   );
 };
 
-const requestSiteRebuild = async (env: Env, batchId: string) => {
-  await requestSiteDeployment(env);
+const requestSiteRebuild = async (
+  env: Env,
+  batchId: string,
+  dataSha: string,
+) => {
+  await requestSiteDeployment(env, dataSha);
   await updateBatch(env, batchId, {
     deployment_requested_at: new Date().toISOString(),
   });
@@ -62,7 +66,7 @@ const finalizeBatch = async (
     p_batch_id: batch.id,
     p_merge_sha: mergeSha,
   });
-  await requestSiteRebuild(env, batch.id);
+  await requestSiteRebuild(env, batch.id, mergeSha);
 };
 
 const prepareBatch = async (
@@ -204,7 +208,7 @@ export const reconcileListingRemovals = async (env: Env): Promise<void> => {
   );
   for (const batch of awaitingDeployment) {
     try {
-      await requestSiteRebuild(env, batch.id);
+      await requestSiteRebuild(env, batch.id, batch.github_merge_sha ?? "");
     } catch (error) {
       console.error(
         JSON.stringify({

@@ -10,6 +10,8 @@ import {
 } from "../lib/github-targets";
 import type { Env } from "../lib/types";
 
+const dataSha = "0123456789abcdef0123456789abcdef01234567";
+
 test("fork-only mode refuses original organization repositories", () => {
   assert.throws(
     () => assertForkOnlyRepository("PerkCommons/data", "true"),
@@ -31,41 +33,67 @@ test("default target config resolves canonical PerkCommons data", () => {
   });
 });
 
-test("a Vercel deploy hook configures site deployment", () => {
+test("site deployment requires the GitHub workflow token", () => {
   assert.equal(
     siteDeploymentConfigured({
-      VERCEL_DEPLOY_HOOK_URL:
-        "https://api.vercel.com/v1/integrations/deploy/test-hook",
+      GITHUB_SITE_DEPLOY_TOKEN: "token",
     } as Env),
     true,
   );
+  assert.equal(siteDeploymentConfigured({} as Env), false);
 });
 
-test("Vercel deploy hook is called with POST", async () => {
+test("site deployment rejects non-immutable data refs", async () => {
+  await assert.rejects(
+    requestSiteDeployment(
+      {
+        GITHUB_SITE_DEPLOY_TOKEN: "token",
+        GITHUB_SITE_REPOSITORY: "PerkCommons/site",
+        FORK_ONLY_MODE: "false",
+      } as Env,
+      "main",
+    ),
+    /exact data commit/i,
+  );
+});
+
+test("GitHub deployment dispatch pins the exact data commit", async () => {
   const originalFetch = globalThis.fetch;
-  const calls: Array<{ url: string; method: string }> = [];
+  let call:
+    | { url: string; method: string; body: Record<string, unknown> }
+    | undefined;
   globalThis.fetch = async (input, init) => {
-    calls.push({ url: String(input), method: init?.method ?? "GET" });
-    return Response.json({ job: { id: "job_test" } });
+    call = {
+      url: String(input),
+      method: init?.method ?? "GET",
+      body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
+    };
+    return new Response(null, { status: 204 });
   };
 
   try {
-    await requestSiteDeployment({
-      VERCEL_DEPLOY_HOOK_URL:
-        "https://api.vercel.com/v1/integrations/deploy/test-hook",
-    } as Env);
-    assert.deepEqual(calls, [
+    await requestSiteDeployment(
       {
-        url: "https://api.vercel.com/v1/integrations/deploy/test-hook",
-        method: "POST",
+        GITHUB_SITE_DEPLOY_TOKEN: "token",
+        GITHUB_SITE_REPOSITORY: "PerkCommons/site",
+        FORK_ONLY_MODE: "false",
+      } as Env,
+      dataSha,
+    );
+    assert.deepEqual(call, {
+      url: "https://api.github.com/repos/PerkCommons/site/actions/workflows/deploy.yml/dispatches",
+      method: "POST",
+      body: {
+        ref: "main",
+        inputs: { data_sha: dataSha },
       },
-    ]);
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("legacy GitHub deployment also obeys fork-only guard", async () => {
+test("GitHub deployment obeys the optional fork-only guard", async () => {
   const originalFetch = globalThis.fetch;
   let called = false;
   globalThis.fetch = async () => {
@@ -75,11 +103,14 @@ test("legacy GitHub deployment also obeys fork-only guard", async () => {
 
   try {
     await assert.rejects(
-      requestSiteDeployment({
-        GITHUB_SITE_DEPLOY_TOKEN: "token",
-        GITHUB_SITE_REPOSITORY: "PerkCommons/site",
-        FORK_ONLY_MODE: "true",
-      } as Env),
+      requestSiteDeployment(
+        {
+          GITHUB_SITE_DEPLOY_TOKEN: "token",
+          GITHUB_SITE_REPOSITORY: "PerkCommons/site",
+          FORK_ONLY_MODE: "true",
+        } as Env,
+        dataSha,
+      ),
       /fork-only/i,
     );
     assert.equal(called, false);

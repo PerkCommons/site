@@ -51,6 +51,13 @@ const mockStaticPreviewWorkerDependencies = async (page: Page) => {
       body: JSON.stringify({ moderator: null }),
     }),
   );
+  await page.route("**/api/site-stats", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ month: "2026-10", monthlyBrowsers: 0, onlineNow: 0, listingOpens: 0 }),
+    }),
+  );
 };
 
 const isExpectedDocument404 = (

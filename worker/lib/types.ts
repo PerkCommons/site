@@ -1,3 +1,4 @@
+import type { DurableObjectNamespace } from "@cloudflare/workers-types";
 export type ModeratorRole = "reviewer" | "admin";
 export type SubmissionStatus =
   | "pending"
@@ -15,6 +16,7 @@ interface TombstoneStore {
 
 export interface Env {
   ASSETS?: { fetch(request: Request): Promise<Response> };
+  SITE_STATS?: DurableObjectNamespace;
   SUPABASE_URL: string;
   SUPABASE_PUBLISHABLE_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;

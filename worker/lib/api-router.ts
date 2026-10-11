@@ -1,5 +1,6 @@
 import { apiError, json, methodNotAllowed, RequestError } from "./http.js";
 import type { Env } from "./types.js";
+import { handleSiteStats } from "../routes/site-stats.js";
 import {
   bans,
   canonicalListingDetail,
@@ -118,6 +119,7 @@ export async function routeApiRequest(
   const url = new URL(request.url);
   const path = url.pathname;
   try {
+    if (path === "/api/site-stats") return await handleSiteStats(request, env);
     const catalogResponse = await publicCatalogApi(request, env);
     if (catalogResponse) return catalogResponse;
 

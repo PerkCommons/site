@@ -110,8 +110,34 @@ const structuredData = baseStructuredData(Astro.site!);
           <a class="mt-2 block" href="mailto:press@perkcommons.com">Press</a>
         </div>
       </div>
+        {!noindex && (
+        <section id="site-activity-stats" class="container mt-10 border-t border-line pt-6" aria-label="Public site activity">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="text-sm font-semibold text-ink">PerkCommons activity</p>
+              <p class="mt-1 text-xs">First-party, approximate counts from when tracking began.</p>
+            </div>
+            <dl class="grid grid-cols-3 gap-5 sm:gap-8">
+              <div>
+                <dt class="text-xs">Browsers this month</dt>
+                <dd data-stat="monthlyBrowsers" class="mt-1 text-xl font-semibold tabular-nums text-ink">—</dd>
+              </div>
+              <div>
+                <dt class="text-xs">Active now</dt>
+                <dd data-stat="onlineNow" class="mt-1 text-xl font-semibold tabular-nums text-ink">—</dd>
+              </div>
+              <div>
+                <dt class="text-xs">Listings opened</dt>
+                <dd data-stat="listingOpens" class="mt-1 text-xl font-semibold tabular-nums text-ink">—</dd>
+              </div>
+            </dl>
+          </div>
+          <p class="mt-4 text-xs leading-5">Monthly count for <span data-stat-month>this month (UTC)</span>. “Active” means a browser seen within five minutes. Listing opens are counted at most once per browser and listing every 30 minutes. <a href="/privacy/" class="underline">Privacy and opt-out</a>.</p>
+        </section>
+      )}
     </footer>
     <script>
+      import "../scripts/site-stats";
       const button = document.querySelector<HTMLButtonElement>("#menu-button");
       const menu = document.querySelector<HTMLElement>("#mobile-menu");
       button?.addEventListener("click", () => {

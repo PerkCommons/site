@@ -1,3 +1,4 @@
+export { SiteStats } from "./site-stats-object.js";
 import { requireModerator } from "./lib/auth";
 import { routeApiRequest } from "./lib/api-router";
 import { withSecurityHeaders } from "./lib/http";

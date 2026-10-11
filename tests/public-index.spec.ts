@@ -55,6 +55,26 @@ test("footer exposes the public contact channels", async ({ page }) => {
   }
 });
 
+test("anonymous activity counters appear on public pages, not private or missing pages", async ({ page }) => {
+  await page.route("**/api/site-stats", async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ month: "2026-10", monthlyBrowsers: 12, onlineNow: 3, listingOpens: 42 }),
+    });
+  });
+  await page.goto("/");
+  const stats = page.locator("#site-activity-stats");
+  await expect(stats).toBeVisible();
+  await expect(stats.locator("[data-stat='monthlyBrowsers']")).toHaveText("12");
+  await expect(stats.locator("[data-stat='onlineNow']")).toHaveText("3");
+  await expect(stats.locator("[data-stat='listingOpens']")).toHaveText("42");
+  await page.goto("/moderator-login/");
+  await expect(page.locator("#site-activity-stats")).toHaveCount(0);
+  await page.goto("/this-page-does-not-exist/");
+  await expect(page.locator("#site-activity-stats")).toHaveCount(0);
+});
+
 test("directory filters records and preserves a stable layout", async ({
   page,
 }, testInfo) => {

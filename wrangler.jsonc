@@ -15,6 +15,12 @@
   "triggers": {
     "crons": ["*/2 * * * *"]
   },
+  "durable_objects": {
+    "bindings": [{ "name": "SITE_STATS", "class_name": "SiteStats" }]
+  },
+  "exports": {
+    "SiteStats": { "type": "durable-object", "storage": "sqlite" }
+  },
   "assets": {
     "binding": "ASSETS",
     "directory": "./dist",
@@ -59,6 +65,7 @@
   },
   "env": {
     "dev": {
+      "durable_objects": { "bindings": [{ "name": "SITE_STATS", "class_name": "SiteStats" }] },
       "name": "perkcommons-site-dev",
       "workers_dev": true,
       "preview_urls": true,

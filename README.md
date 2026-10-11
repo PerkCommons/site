@@ -85,3 +85,23 @@ Wrangler deploys `dist/` through Workers Static Assets and runs
 `worker/index.ts` first for `/api/*` and `/moderate/*`. The canonical public URL
 of the official project remains `https://perkcommons.com`; this fork must not
 claim or modify it.
+
+## Public activity counters
+
+The common public footer shows three first-party, approximate metrics: unique
+browsers in the current UTC month, active browsers in the last five minutes,
+and opportunity detail views since tracking started. Views are counted once per
+browser/listing per 30 minutes, not on each heartbeat. Bots and opted-out
+browsers are excluded. This is **not** a user count, sign-up count, or complete
+traffic audit. Counts start at zero on initial deployment, with no historical
+backfill. The 404 and moderator pages omit the widget.
+
+`/api/site-stats` reads and records events using the `SiteStats` SQLite Durable
+Object binding (`wrangler.jsonc`). The public browser script sends pseudonymous,
+first-party browser IDs over same-origin requests; the Worker HMACs them before
+persistence. The private DO stores only opaque hashes and counts, with monthly
+records retained for 13 months, presence for 5 minutes and view de-duplication
+for 30 minutes. No third-party analytics code is loaded. See `/privacy/` for
+the browser opt-out. DNT and GPC are respected. Do not use the numbers to claim
+precise human audience size, and review regional analytics consent requirements
+before advertising.

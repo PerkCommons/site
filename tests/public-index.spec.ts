@@ -114,6 +114,55 @@ test("opt-in consent gates analytics, supports refusal, and erases on withdrawal
   await expect(banner).toBeHidden();
 });
 
+test("browser privacy signals show first-visit choices and accept closes without tracking", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "globalPrivacyControl", { configurable: true, value: true });
+  });
+  const calls: string[] = [];
+  await page.route("**/api/site-stats", async route => {
+    calls.push(route.request().method());
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+      month: "2026-10", monthlyBrowsers: 0, onlineNow: 0, listingOpens: 0,
+    }) });
+  });
+  await page.goto("/");
+  const banner = page.locator("#analytics-consent-banner");
+  await expect(banner).toBeVisible();
+  await expect(banner.locator("#analytics-consent-state")).toContainText("privacy");
+  const accept = banner.getByRole("button", { name: "Accept optional analytics" });
+  await expect(accept).toBeEnabled();
+  await accept.click();
+  await expect(banner).toBeHidden();
+  expect(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("perkcommons-stats-browser-")))).toEqual([]);
+  expect(calls.every(method => method === "GET")).toBe(true);
+  await page.reload();
+  await expect(banner).toBeHidden();
+  expect(calls.every(method => method === "GET")).toBe(true);
+  await page.getByRole("button", { name: "Analytics choices" }).click();
+  await expect(banner).toBeVisible();
+  await expect(banner.locator("#analytics-consent-state")).toContainText("keeps analytics disabled");
+  await banner.getByRole("button", { name: "Reject optional analytics" }).click();
+  await expect(banner).toBeHidden();
+});
+
+test("Do Not Track shows choices and never sends tracking events", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "doNotTrack", { configurable: true, value: "1" });
+  });
+  const methods: string[] = [];
+  await page.route("**/api/site-stats", async route => {
+    methods.push(route.request().method());
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ month: "2026-10", monthlyBrowsers: 0, onlineNow: 0, listingOpens: 0 }) });
+  });
+  await page.goto("/");
+  const banner = page.locator("#analytics-consent-banner");
+  await expect(banner).toBeVisible();
+  await banner.getByRole("button", { name: "Accept optional analytics" }).click();
+  await expect(banner).toBeHidden();
+  expect(methods.every(method => method === "GET")).toBe(true);
+  expect(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("perkcommons-stats-browser-")))).toEqual([]);
+});
+
 test("legacy visitor identifiers are discarded without consent", async ({ page }) => {
   const methods: string[] = [];
   await page.addInitScript(() => localStorage.setItem("perkcommons-stats-browser-2026-10", "826bad35-381b-4a8d-a2dc-902c6930d2d3"));

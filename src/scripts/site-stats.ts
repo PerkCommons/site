@@ -56,14 +56,17 @@ if (panel) {
   }
   function optedIn(): boolean { return choice === "accepted" && !privacySignal; }
   function updateConsentControls(showPrompt = false): void {
-    const show = showPrompt || (choice === null && !privacySignal);
+    // A first-time visitor must be able to see and dismiss the choice even
+    // when browser-level privacy signals already disable tracking.
+    const show = showPrompt || choice === null;
     banner?.classList.toggle("hidden", !show);
     if (status) status.textContent = privacySignal
-      ? "Analytics blocked by your browser privacy settings."
+      ? choice === "accepted"
+        ? "Preference saved. Your browser privacy signal keeps analytics disabled."
+        : "Your browser requests privacy, so analytics stay disabled even if you accept."
       : choice === "accepted" ? "Optional analytics enabled."
       : choice === "rejected" ? "Optional analytics rejected."
       : "Optional analytics not selected. No tracking is active.";
-    document.querySelectorAll<HTMLButtonElement>("[data-analytics-accept]").forEach(b => { b.disabled = privacySignal; });
   }
   function present(data: Counts): void {
     for (const key of ["monthlyBrowsers", "onlineNow", "listingOpens"] as const) {
@@ -123,9 +126,16 @@ if (panel) {
     finally { requestInFlight = false; }
   }
   function selectPreference(next: Choice): void {
-    if (next === "accepted" && privacySignal) return;
+    // Explicit consent can be saved, but never overrides Do Not Track or GPC.
+    // A browser-level privacy signal continues to block tracking events.
     const saved = safeWrite(PREF_KEY, JSON.stringify({ version: 1, choice: next, at: Date.now() } satisfies Preference));
-    if (!saved) { if (status) status.textContent = "Your browser blocked saving this choice. Tracking stays off."; return; }
+    if (!saved) {
+      // The controls should remain usable with blocked storage. Without a
+      // durable preference or visitor ID, no analytics tracking can occur.
+      choice = "rejected";
+      updateConsentControls();
+      return;
+    }
     try { localStorage.removeItem(LEGACY_OPT_OUT); } catch {}
     choice = next;
     if (next === "rejected") { cleanIdentifiers(true); void flushDeletionQueue(); }

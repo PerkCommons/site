@@ -8,12 +8,13 @@ const id = "826bad35-381b-4a8d-a2dc-902c6930d2d3";
 function mockEnv() {
   const calls: Array<{ path: string; value?: { visitor: string; listing: string | null } }> = [];
   const env = {
+    ENVIRONMENT: "production",
     SUBMISSION_FINGERPRINT_SECRET: "test-secret-not-private",
     TRACKING_RATE_LIMITER: { limit: async () => ({ success: true }) },
-    SITE_STATS: { getByName: (_name: string) => ({ fetch: async (url: string, init?: RequestInit) => {
+    SITE_STATS: { jurisdiction: (_region: string) => ({ getByName: (_name: string) => ({ fetch: async (url: string, init?: RequestInit) => {
       calls.push({ path: new URL(url).pathname, value: init?.body ? JSON.parse(String(init.body)) : undefined });
       return Response.json({ month: "2026-10", monthlyBrowsers: 5, onlineNow: 2, listingOpens: 7 });
-    } }) },
+    } }) }) },
   } as unknown as Env;
   return { env, calls };
 }
@@ -64,8 +65,18 @@ test("rejects cross-origin traffic, bots, private pages, and invalid IDs", async
   }
 });
 
-test("returns the counter snapshot on methods only GET/POST", async () => {
+test("withdrawal deletes the current month's hashed browser records", async () => {
   const { env, calls } = mockEnv();
-  assert.equal((await handleSiteStats(new Request(`${origin}/api/site-stats`, { method: "DELETE" }), env)).status, 405);
+  const request = event({}, { visitorId: id });
+  const response = await handleSiteStats(new Request(request.url, { method: "DELETE", headers: request.headers, body: JSON.stringify({ visitorId: id }) }), env);
+  assert.equal(response.status, 200);
+  assert.equal(calls[0]?.path, "/forget");
+  assert.match(calls[0]?.value?.visitor ?? "", /^[a-f0-9]{64}$/);
+  assert.ok(!JSON.stringify(calls).includes(id));
+});
+
+test("returns the counter snapshot on methods only GET/POST/DELETE", async () => {
+  const { env, calls } = mockEnv();
+  assert.equal((await handleSiteStats(new Request(`${origin}/api/site-stats`, { method: "PUT" }), env)).status, 405);
   assert.equal(calls.length, 0);
 });

@@ -7,9 +7,11 @@ interface Stats { month: string; monthlyBrowsers: number; onlineNow: number; lis
 export class SiteStats {
   private readonly ctx: DurableObjectState;
   private lastPrune = 0;
+  private readonly env: Env;
 
-  constructor(ctx: DurableObjectState, _env: Env) {
+  constructor(ctx: DurableObjectState, env: Env) {
     this.ctx = ctx;
+    this.env = env;
     const sql = this.ctx.storage.sql;
     sql.exec("CREATE TABLE IF NOT EXISTS monthly_visitors (month TEXT NOT NULL, visitor TEXT NOT NULL, first_seen INTEGER NOT NULL, PRIMARY KEY (month, visitor))");
     sql.exec("CREATE TABLE IF NOT EXISTS presence (visitor TEXT PRIMARY KEY, last_seen INTEGER NOT NULL)");
@@ -24,9 +26,8 @@ export class SiteStats {
     const sql = this.ctx.storage.sql;
     sql.exec("DELETE FROM presence WHERE last_seen < ?", now - 5 * 60_000);
     sql.exec("DELETE FROM recent_opens WHERE last_seen < ?", now - 30 * 60_000);
-    // Keep 13 months of browser counts; the lifetime listing total remains.
-    const expiryMonth = new Date(Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth() - 12, 1)).toISOString().slice(0, 7);
-    sql.exec("DELETE FROM monthly_visitors WHERE month < ?", expiryMonth);
+    // Current-month audience only. Delete all prior months as soon as the object is accessed.
+    sql.exec("DELETE FROM monthly_visitors WHERE month < ?", new Date(now).toISOString().slice(0, 7));
   }
 
   private snapshot(now: number): Stats {
@@ -38,9 +39,42 @@ export class SiteStats {
     return { month, monthlyBrowsers, onlineNow, listingOpens };
   }
 
+  private async clearLegacyData(): Promise<void> {
+    if (this.ctx.id.jurisdiction !== "eu") return;
+    if (await this.ctx.storage.get<boolean>("legacy-cleared")) return;
+    // The old unscoped object previously received pseudonymous records without
+    // affirmative consent. Destroy those records; do not migrate them to the EU object.
+    try {
+      const old = this.env.SITE_STATS?.getByName("perkcommons-public-stats-v1");
+      if (!old) return;
+      const result = await old.fetch("https://stats.internal/clear-legacy", { method: "POST" });
+      if (!result.ok) throw new Error("Legacy analytics purge failed");
+      await this.ctx.storage.put("legacy-cleared", true);
+    } catch { console.error("Legacy analytics cleanup not completed; will retry."); }
+  }
+
   async fetch(request: Request): Promise<Response> {
+    const path = new URL(request.url).pathname;
+    const sql = this.ctx.storage.sql;
+    if (path === "/clear-legacy" && request.method === "POST") {
+      sql.exec("DELETE FROM monthly_visitors");
+      sql.exec("DELETE FROM presence");
+      sql.exec("DELETE FROM recent_opens");
+      sql.exec("UPDATE totals SET value = 0");
+      return new Response(null, { status: 204 });
+    }
+    await this.clearLegacyData();
     const now = Date.now();
     this.prune(now);
+    if (path === "/forget" && request.method === "POST") {
+      const { visitor } = await request.json() as { visitor?: unknown };
+      if (typeof visitor !== "string" || !/^[a-f0-9]{64}$/.test(visitor)) return new Response("Invalid identifier", { status: 400 });
+      sql.exec("DELETE FROM monthly_visitors WHERE visitor = ?", visitor);
+      sql.exec("DELETE FROM presence WHERE visitor = ?", visitor);
+      sql.exec("DELETE FROM recent_opens WHERE visitor = ?", visitor);
+      // Already aggregated totals contain no visitor ID and cannot be attributed.
+      return Response.json(this.snapshot(now), { headers: { "cache-control": "no-store" } });
+    }
     if (new URL(request.url).pathname === "/record" && request.method === "POST") {
       const value = await request.json() as { visitor?: unknown; listing?: unknown };
       if (typeof value.visitor !== "string" || !/^[a-f0-9]{64}$/.test(value.visitor))

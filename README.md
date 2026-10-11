@@ -86,22 +86,31 @@ Wrangler deploys `dist/` through Workers Static Assets and runs
 of the official project remains `https://perkcommons.com`; this fork must not
 claim or modify it.
 
-## Public activity counters
+## Public activity counters and analytics consent
 
-The common public footer shows three first-party, approximate metrics: unique
-browsers in the current UTC month, active browsers in the last five minutes,
-and opportunity detail views since tracking started. Views are counted once per
-browser/listing per 30 minutes, not on each heartbeat. Bots and opted-out
-browsers are excluded. This is **not** a user count, sign-up count, or complete
-traffic audit. Counts start at zero on initial deployment, with no historical
-backfill. The 404 and moderator pages omit the widget.
+The common public footer reports **participating** monthly browsers, browsers
+active in the last five minutes, and deduplicated opportunity opens. These are
+approximate metrics, not all visitors or unique people. Counters use a SQLite
+Cloudflare Durable Object restricted to the EU jurisdiction. Legacy counters
+from before the opt-in migration are cleared and not moved. History begins with
+the compliant new store, not with earlier analytics deployments.
 
-`/api/site-stats` reads and records events using the `SiteStats` SQLite Durable
-Object binding (`wrangler.jsonc`). The public browser script sends pseudonymous,
-first-party browser IDs over same-origin requests; the Worker HMACs them before
-persistence. The private DO stores only opaque hashes and counts, with monthly
-records retained for 13 months, presence for 5 minutes and view de-duplication
-for 30 minutes. No third-party analytics code is loaded. See `/privacy/` for
-the browser opt-out. DNT and GPC are respected. Do not use the numbers to claim
-precise human audience size, and review regional analytics consent requirements
-before advertising.
+No monthly browser ID or activity POST is generated before informed opt-in.
+A non-blocking equal-choice consent panel appears on public pages for visitors
+without a current choice. Rejection never restricts site access. Consent and
+rejection are stored locally to honor preferences, with re-prompt after 180 days;
+the footer and privacy page provide a persistent control to change the choice.
+DNT/GPC signals disable tracking regardless of the stored preference. Rejecting
+or withdrawing erases browser IDs and sends (or retries) a DELETE request to
+remove the pseudonymous current-month records. Monthly identifiers are purged
+when the month changes; presence after five minutes; listing de-duplication
+after 30 minutes. Cumulative view totals are identifier-free. Cloudflare
+rate limits and HMAC hashing protect the public endpoints. Browser tests check
+pre-consent network activity, both choices and revocation. No third-party
+analytics code is loaded.
+
+The privacy page describes the controller, lawful bases, processors, data
+retention, data-subject rights and UODO complaint channel. The operator must
+independently confirm Cloudflare account DPA/transfer settings and Polish legal
+obligations with qualified counsel; source changes alone are not a legal
+certification. Do not use these numbers to claim total human audience size.

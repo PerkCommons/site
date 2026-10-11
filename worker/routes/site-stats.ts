@@ -11,8 +11,14 @@ function responseUnavailable(): Response {
 
 export async function handleSiteStats(request: Request, env: Env): Promise<Response> {
   if (!env.SITE_STATS) return responseUnavailable();
-  if (request.method !== "GET" && request.method !== "POST") return methodNotAllowed();
-  const stub = env.SITE_STATS.getByName("perkcommons-public-stats-v1");
+  if (request.method !== "GET" && request.method !== "POST" && request.method !== "DELETE") return methodNotAllowed();
+  // New EU-only object; deliberately does not migrate old pre-consent identities.
+  // Local workerd does not implement jurisdictions. Production must fail closed
+  // if EU restriction is unavailable: never fall back to unrestricted storage.
+  const namespace = env.ENVIRONMENT === "production"
+    ? env.SITE_STATS.jurisdiction("eu")
+    : env.SITE_STATS;
+  const stub = namespace.getByName("perkcommons-public-stats-v1");
   try {
     if (request.method === "GET") {
       const result = await stub.fetch("https://stats.internal/read");
@@ -31,7 +37,7 @@ export async function handleSiteStats(request: Request, env: Env): Promise<Respo
     const pathname = pageUrl.pathname;
     if (pathname === "/404.html" || /^\/(moderate|moderator-login|api)(\/|$)/.test(pathname))
       return apiError("Tracking is disabled on this page.", 403, "stats_disabled");
-    if (AUTOMATION_UA.test(request.headers.get("user-agent") ?? ""))
+    if (request.method === "POST" && AUTOMATION_UA.test(request.headers.get("user-agent") ?? ""))
       return apiError("Automated requests are not counted.", 403, "stats_bot");
     const body = await request.text();
     if (body.length > 256) return apiError("Invalid event format.", 400, "invalid_event");
@@ -39,7 +45,7 @@ export async function handleSiteStats(request: Request, env: Env): Promise<Respo
     if (typeof parsed.visitorId !== "string" || !BROWSER_ID.test(parsed.visitorId))
       return apiError("Invalid visitor identifier.", 400, "invalid_visitor");
     // Rate limit by network only transiently in Cloudflare. No IP is persisted in SQLite.
-    if (env.TRACKING_RATE_LIMITER) {
+    if (request.method === "POST" && env.TRACKING_RATE_LIMITER) {
       const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
       const result = await env.TRACKING_RATE_LIMITER.limit({ key: `site-stats:${ip}` });
       if (!result.success) return apiError("Too many activity updates.", 429, "rate_limited");
@@ -48,6 +54,12 @@ export async function handleSiteStats(request: Request, env: Env): Promise<Respo
     const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.SUBMISSION_FINGERPRINT_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
     const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`public-stats:${month}:${parsed.visitorId}`));
     const visitor = Array.from(new Uint8Array(digest), x => x.toString(16).padStart(2, "0")).join("");
+    if (request.method === "DELETE") {
+      const result = await stub.fetch("https://stats.internal/forget", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ visitor }),
+      });
+      return new Response(result.body, { status: result.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+    }
     const listing = parsed.open === true ? (pathname.match(LISTING_PATH)?.[1] ?? null) : null;
     const result = await stub.fetch("https://stats.internal/record", {
       method: "POST",

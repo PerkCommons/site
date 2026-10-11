@@ -64,25 +64,99 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       </section>
 
       <section class="border-t border-line pt-8">
-        <h2 class="text-2xl font-semibold">First-party public activity counters</h2>
+        <h2 class="text-2xl font-semibold">Who controls the information</h2>
         <p class="mt-3 leading-7 text-muted">
-          PerkCommons displays the number of unique browsers visiting in the current UTC month,
-          browsers active in the previous five minutes, and opportunity pages opened since these
-          counters launched. They are approximate browser counts, not unique people or guarantees
-          of human engagement. Browsers with tracking protections enabled may not be counted.
+          PerkCommons is a free community-maintained project operated by Nataniel Bogacki,
+          an individual based in Poland, not a registered company. For privacy enquiries,
+          access or deletion requests, or to exercise your rights, contact
+          <a href="mailto:privacy@perkcommons.com" class="font-medium underline">privacy@perkcommons.com</a>.
+          You can use the directory without an account and without opting into analytics.
+        </p>
+      </section>
+
+      <section class="border-t border-line pt-8">
+        <h2 class="text-2xl font-semibold">Optional first-party audience measurement</h2>
+        <p class="mt-3 leading-7 text-muted">
+          If you affirmatively accept optional analytics, your browser creates a random,
+          pseudonymous ID in first-party local storage for the current UTC month.
+          A Cloudflare Worker derives a keyed, month-specific cryptographic hash and sends
+          it to an EU-restricted Cloudflare Durable Object. This lets us count participating
+          browsers this month, participating browsers active during the previous five minutes,
+          and deduplicated opportunity-page opens. These are approximate browser counts,
+          not unique people or verified users. We use no third-party analytics pixels.
+          The legal basis is your consent (GDPR Article 6(1)(a)); device storage and access
+          for this optional purpose also require prior consent under Polish electronic
+          communications law. Refusal has no effect on access to any PerkCommons feature.
         </p>
         <p class="mt-3 leading-7 text-muted">
-          Your browser generates a random, first-party ID that is stored locally for the current UTC
-          month. Our Cloudflare Worker replaces it with a keyed cryptographic hash before the
-          counting database sees it. That database stores neither your raw ID nor your IP address,
-          and no third-party analytics scripts are used. We use the IP transiently for rate limits.
-          Browser-count records are retained for up to 13 months, activity presence is kept for
-          five minutes, and per-listing duplicate prevention lasts 30 minutes. Only totals of
-          opportunity opens are kept indefinitely. Do Not Track and Global Privacy Control
-          signals disable participation in these counters.
+          Without consent, you can still see the public aggregate counters. We do not
+          create an analytics ID or send activity events. Your consent or rejection is
+          remembered only so we can honour your selection. You may change it at any time
+          through the “Analytics choices” link in the footer. Consent is renewed after 180
+          days or if the purpose changes. Do Not Track and Global Privacy Control signals
+          prevent analytics participation even if you previously accepted.
         </p>
-        <button type="button" id="site-stats-opt-out" class="mt-4 rounded-md border border-line bg-surface px-4 py-3 font-medium text-ink">Disable anonymous statistics on this browser</button>
-        <p id="site-stats-opt-out-status" role="status" class="mt-2 text-sm text-muted"></p>
+        <p class="mt-3 leading-7 text-muted">
+          Month-specific browser IDs are stored on your device while consent remains active.
+          In the EU counter store, hashed current-month identifiers are deleted after the
+          month changes, active-presence records expire after five minutes, and
+          per-listing duplicate-suppression records expire after 30 minutes.
+          Cumulative listing totals are retained in aggregate without browser identifiers.
+          We process IP addresses temporarily at Cloudflare to limit abusive submissions
+          to this counter endpoint, but do not place raw IP addresses in the counter database.
+          Withdrawing consent deletes the local analytics ID and requests deletion of the
+          associated current-month hashed records; if offline, the deletion request is
+          retried the next time you use the site. Aggregate totals cannot be attributed to
+          or removed for an individual browser.
+        </p>
+        <div class="mt-4 flex flex-wrap items-center gap-4">
+          <button type="button" data-open-analytics-settings class="min-h-11 rounded-md border border-line bg-surface px-4 font-medium text-ink">Change analytics choices</button>
+          <p class="text-sm text-muted" role="status">Your current analytics preference is shown in the choice panel.</p>
+        </div>
+      </section>
+
+      <section class="border-t border-line pt-8">
+        <h2 class="text-2xl font-semibold">Other processing and lawful bases</h2>
+        <p class="mt-3 leading-7 text-muted">
+          Submissions, corrections and reports are processed for the legitimate interests
+          of maintaining a safe, accurate public directory and responding to community
+          requests (GDPR Article 6(1)(f)). Information you voluntarily provide may
+          include contact details and evidence. Access to moderation records is restricted;
+          project moderation, security and retention policies explain operational handling.
+          We use necessary technical information to deliver the website and protect it
+          from abuse. We do not sell visitor information or use it to target ads.
+        </p>
+      </section>
+
+      <section class="border-t border-line pt-8">
+        <h2 class="text-2xl font-semibold">Processors and international transfers</h2>
+        <p class="mt-3 leading-7 text-muted">
+          We use Cloudflare to serve the site, process requests and store optional
+          analytics aggregates. Analytics Durable Object storage is restricted to
+          the European Union, but this does not guarantee all Cloudflare edge
+          processing, technical metadata or logs remain there. We use Supabase
+          for private submissions and moderation. These providers may involve
+          processing outside the European Economic Area subject to applicable
+          contractual and legal safeguards, including standard contractual
+          clauses where required. Cloudflare publishes its
+          <a href="https://www.cloudflare.com/cloudflare-customer-dpa/" class="underline">Data Processing Addendum</a>.
+          Contact us for further information about the safeguards relevant to your data.
+        </p>
+      </section>
+
+      <section class="border-t border-line pt-8">
+        <h2 class="text-2xl font-semibold">Your data rights</h2>
+        <p class="mt-3 leading-7 text-muted">
+          Depending on the circumstances, you may request access, correction, erasure,
+          restriction, portability or objection to personal-data processing. You can
+          withdraw analytics consent at any time without affecting the lawfulness of
+          earlier processing. If you no longer hold the random ID, we may be unable
+          to link an otherwise pseudonymous counter record to you; we do not collect
+          additional identity information solely to identify anonymous-looking statistics.
+          To make a request, email <a href="mailto:privacy@perkcommons.com" class="underline">privacy@perkcommons.com</a>.
+          You may also complain to the Polish supervisory authority,
+          <a href="https://uodo.gov.pl/" class="underline">Urząd Ochrony Danych Osobowych (UODO)</a>.
+        </p>
       </section>
 
       <section class="border-t border-line pt-8">
@@ -96,18 +170,4 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       </section>
     </div>
   </section>
-  <script>
-    const button = document.querySelector<HTMLButtonElement>("#site-stats-opt-out");
-    const status = document.querySelector<HTMLElement>("#site-stats-opt-out-status");
-    button?.addEventListener("click", () => {
-      try {
-        localStorage.setItem("perkcommons-stats-opt-out", "1");
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const key = localStorage.key(i);
-          if (key?.startsWith("perkcommons-stats-browser-")) localStorage.removeItem(key);
-        }
-        if (status) status.textContent = "Anonymous activity updates are now disabled on this browser.";
-      } catch { if (status) status.textContent = "Your browser blocks local storage; no activity identifier is being stored."; }
-    });
-  </script>
 </BaseLayout>

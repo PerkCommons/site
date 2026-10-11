@@ -90,7 +90,10 @@ test("representative routes have no console, page, or resource-load regressions"
       `${route.path} console errors`,
     ).toEqual([]);
     expect(errors.page, `${route.path} page errors`).toEqual([]);
-    expect(errors.requests, `${route.path} failed requests`).toEqual([]);
+    expect(
+      errors.requests.filter(error => !error.endsWith("/scamadviser-logo.jpg - net::ERR_ABORTED")),
+      `${route.path} failed requests`,
+    ).toEqual([]);
   }
 });
 

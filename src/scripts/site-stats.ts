@@ -20,6 +20,7 @@ if (panel) {
   };
   const monthLabel = panel.querySelector<HTMLElement>("[data-stat-month]");
   let requestInFlight = false;
+  let refreshAfterCurrent = false;
   let openedThisPage = false;
   let choice: Choice | null = null;
 
@@ -108,7 +109,13 @@ if (panel) {
     } catch { /* Retry on the next page visit. */ }
   }
   async function refresh(): Promise<void> {
-    if (requestInFlight || document.visibilityState !== "visible") return;
+    if (document.visibilityState !== "visible") return;
+    if (requestInFlight) {
+      // A visitor may accept analytics while the initial read-only GET is
+      // still pending. Run an immediate follow-up so their first visit counts.
+      refreshAfterCurrent = true;
+      return;
+    }
     requestInFlight = true;
     const id = visitorId();
     const open = !openedThisPage && /^\/opportunities\/[a-z0-9-]+\/?$/.test(location.pathname);
@@ -123,7 +130,13 @@ if (panel) {
         if (fallback.ok) present(await fallback.json() as Counts);
       }
     } catch { /* Leave last known counters or dashes; never invent numbers. */ }
-    finally { requestInFlight = false; }
+    finally {
+      requestInFlight = false;
+      if (refreshAfterCurrent) {
+        refreshAfterCurrent = false;
+        void refresh();
+      }
+    }
   }
   function selectPreference(next: Choice): void {
     // Explicit consent can be saved, but never overrides Do Not Track or GPC.

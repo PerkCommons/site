@@ -114,6 +114,36 @@ test("opt-in consent gates analytics, supports refusal, and erases on withdrawal
   await expect(banner).toBeHidden();
 });
 
+test("accepting while initial stats read is in flight records activity without waiting a minute", async ({ page }) => {
+  const methods: string[] = [];
+  let releaseInitialGet!: () => void;
+  const allowInitialGet = new Promise<void>(resolve => { releaseInitialGet = resolve; });
+  let markGetStarted!: () => void;
+  const getStarted = new Promise<void>(resolve => { markGetStarted = resolve; });
+  let firstGetPending = true;
+  await page.route("**/api/site-stats", async route => {
+    const method = route.request().method();
+    methods.push(method);
+    if (method === "GET" && firstGetPending) {
+      firstGetPending = false;
+      markGetStarted();
+      await allowInitialGet;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+      month: "2026-10", monthlyBrowsers: 1, onlineNow: 1, listingOpens: 0,
+    }) });
+  });
+  await page.goto("/");
+  await getStarted;
+  const banner = page.locator("#analytics-consent-banner");
+  await expect(banner).toBeVisible();
+  await banner.getByRole("button", { name: "Accept optional analytics" }).click();
+  await expect(banner).toBeHidden();
+  releaseInitialGet();
+  await expect.poll(() => methods.filter(method => method === "POST").length, { timeout: 5000 }).toBe(1);
+  expect((await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("perkcommons-stats-browser-")))).length).toBe(1);
+});
+
 test("browser privacy signals show first-visit choices and accept closes without tracking", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "globalPrivacyControl", { configurable: true, value: true });

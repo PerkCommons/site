@@ -132,7 +132,9 @@ const structuredData = baseStructuredData(Astro.site!);
               </div>
             </dl>
           </div>
-          <p class="mt-4 text-xs leading-5">Monthly count for <span data-stat-month>this month (UTC)</span>. “Active” means a browser seen within five minutes. Listing opens are counted at most once per browser and listing every 30 minutes. <a href="/privacy/" class="underline">Privacy details</a>. <button type="button" data-open-analytics-settings class="ml-2 underline">Analytics choices</button>.</p>
+          <p data-analytics-counting-status class="mt-4 text-xs font-medium text-muted" aria-live="polite">Checking this browser’s optional analytics preference…</p>
+          <p class="mt-2 text-xs leading-5">Monthly visitors are unique consenting browsers, not visits. Opening this website repeatedly on the same browser adds only one. Browsers with Do Not Track or Global Privacy Control enabled are not counted. Active now covers the past five minutes.</p>
+          <p class="mt-2 text-xs leading-5">Monthly count for <span data-stat-month>this month (UTC)</span>. “Active” means a browser seen within five minutes. Listing opens are counted at most once per browser and listing every 30 minutes. <a href="/privacy/" class="underline">Privacy details</a>. <button type="button" data-open-analytics-settings class="ml-2 underline">Analytics choices</button>.</p>
         </section>
       )}
     </footer>

@@ -11,6 +11,8 @@ if (panel) {
   const MAX_AGE = 180 * 24 * 60 * 60 * 1000;
   const banner = document.querySelector<HTMLElement>("#analytics-consent-banner");
   const status = document.querySelector<HTMLElement>("#analytics-consent-state");
+  const countingStatus = panel.querySelector<HTMLElement>("[data-analytics-counting-status]");
+  const setCountingStatus = (message: string): void => { if (countingStatus) countingStatus.textContent = message; };
   const privacySignal = navigator.doNotTrack === "1" ||
     (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
   const monthlyNodes = {
@@ -68,6 +70,11 @@ if (panel) {
       : choice === "accepted" ? "Optional analytics enabled."
       : choice === "rejected" ? "Optional analytics rejected."
       : "Optional analytics not selected. No tracking is active.";
+    setCountingStatus(privacySignal
+      ? "Not counted on this browser: Do Not Track or Global Privacy Control is enabled."
+      : choice === "accepted" ? "Analytics accepted. This browser is counted once per month when its update succeeds."
+      : choice === "rejected" ? "Not counted on this browser: optional analytics were rejected."
+      : "Not counted on this browser until optional analytics are accepted.");
   }
   function present(data: Counts): void {
     for (const key of ["monthlyBrowsers", "onlineNow", "listingOpens"] as const) {
@@ -124,8 +131,18 @@ if (panel) {
         method: "POST", headers: { "content-type": "application/json" },
         credentials: "omit", cache: "no-store", body: JSON.stringify({ visitorId: id, open }),
       } : { method: "GET", credentials: "omit", cache: "no-store" });
-      if (response.ok) { present(await response.json() as Counts); if (id && open) openedThisPage = true; }
+      if (response.ok) {
+        present(await response.json() as Counts);
+        if (id) {
+          if (open) openedThisPage = true;
+          setCountingStatus("This browser is included in this month's visitor count once. Repeat visits don't add another browser.");
+        }
+      }
       else if (id) {
+        setCountingStatus(response.status === 403
+          ? "Not counted: this browser's analytics update was blocked (HTTP 403)."
+          : response.status === 429 ? "Analytics temporarily rate-limited; retrying automatically."
+          : "Analytics update failed; retrying automatically. This browser has not been counted.");
         const fallback = await fetch("/api/site-stats", { credentials: "omit", cache: "no-store" });
         if (fallback.ok) present(await fallback.json() as Counts);
       }

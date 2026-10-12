@@ -104,6 +104,7 @@ test("opt-in consent gates analytics, supports refusal, and erases on withdrawal
   await banner.getByRole("button", { name: "Accept optional analytics" }).click();
   await expect(banner).toBeHidden();
   await expect.poll(() => calls.filter(method => method === "POST").length).toBeGreaterThan(0);
+  await expect(page.locator("[data-analytics-counting-status]")).toContainText("included");
   expect((await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("perkcommons-stats-browser-")))).length).toBe(1);
 
   await page.getByRole("button", { name: "Analytics choices" }).click();
@@ -171,6 +172,7 @@ test("browser privacy signals show first-visit choices and accept closes without
   await page.getByRole("button", { name: "Analytics choices" }).click();
   await expect(banner).toBeVisible();
   await expect(banner.locator("#analytics-consent-state")).toContainText("keeps analytics disabled");
+  await expect(page.locator("[data-analytics-counting-status]")).toContainText("Not counted");
   await banner.getByRole("button", { name: "Reject optional analytics" }).click();
   await expect(banner).toBeHidden();
 });

@@ -115,26 +115,26 @@ const structuredData = baseStructuredData(Astro.site!);
           <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p class="text-sm font-semibold text-ink">PerkCommons activity</p>
-              <p class="mt-1 text-xs">First-party, approximate counts from when tracking began.</p>
+              <p class="mt-1 text-xs">First-party counts from browsers that opt into analytics.</p>
             </div>
             <dl class="grid grid-cols-3 gap-5 sm:gap-8">
               <div>
-                <dt class="text-xs">Browsers this month</dt>
+                <dt class="text-xs">Monthly browsers</dt>
                 <dd data-stat="monthlyBrowsers" class="mt-1 text-xl font-semibold tabular-nums text-ink">—</dd>
               </div>
               <div>
-                <dt class="text-xs">Active now</dt>
+                <dt class="text-xs">Active (5 min)</dt>
                 <dd data-stat="onlineNow" class="mt-1 text-xl font-semibold tabular-nums text-ink">—</dd>
               </div>
               <div>
-                <dt class="text-xs">Listings opened</dt>
+                <dt class="text-xs">Listing opens</dt>
                 <dd data-stat="listingOpens" class="mt-1 text-xl font-semibold tabular-nums text-ink">—</dd>
               </div>
             </dl>
           </div>
           <p data-analytics-counting-status class="mt-4 text-xs font-medium text-muted" aria-live="polite">Checking this browser’s optional analytics preference…</p>
-          <p class="mt-2 text-xs leading-5">Monthly visitors are unique consenting browsers, not visits. Opening this website repeatedly on the same browser adds only one. Browsers with Do Not Track or Global Privacy Control enabled are not counted. Active now covers the past five minutes.</p>
-          <p class="mt-2 text-xs leading-5">Monthly count for <span data-stat-month>this month (UTC)</span>. “Active” means a browser seen within five minutes. Listing opens are counted at most once per browser and listing every 30 minutes. <a href="/privacy/" class="underline">Privacy details</a>. <button type="button" data-open-analytics-settings class="ml-2 underline">Analytics choices</button>.</p>
+          <p class="mt-2 text-xs leading-5">Monthly browsers are unique consenting browsers, not page views; refreshing the same browser does not increase the number. Do Not Track and Global Privacy Control suppress tracking even after acceptance. Listing opens include only participating browsers viewing opportunity pages and are cumulative, even after browsers leave.</p>
+          <p class="mt-2 text-xs leading-5">Month: <span data-stat-month>this month (UTC)</span> · <span data-stats-updated-at>Awaiting first update</span>. <a href="/privacy/" class="underline">Privacy details</a>. <button type="button" data-open-analytics-settings class="ml-2 underline">Analytics choices</button>.</p>
         </section>
       )}
     </footer>

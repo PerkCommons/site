@@ -104,7 +104,7 @@ test("opt-in consent gates analytics, supports refusal, and erases on withdrawal
   await banner.getByRole("button", { name: "Accept optional analytics" }).click();
   await expect(banner).toBeHidden();
   await expect.poll(() => calls.filter(method => method === "POST").length).toBeGreaterThan(0);
-  await expect(page.locator("[data-analytics-counting-status]")).toContainText("included");
+  await expect(page.locator("[data-analytics-counting-status]")).toContainText("Confirmed");
   expect((await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("perkcommons-stats-browser-")))).length).toBe(1);
 
   await page.getByRole("button", { name: "Analytics choices" }).click();
@@ -563,4 +563,61 @@ test("upheld reports suppress removed listing details", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "GitHub Student Developer Pack" }),
   ).toHaveCount(0);
+});
+
+
+test("shows first-party counting diagnostics and recent refresh timestamp", async ({ page }) => {
+  await page.route("**/api/site-stats", async route => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ month: "2026-10", monthlyBrowsers: 0, onlineNow: 0, listingOpens: 1 }) });
+  });
+  await page.goto("/");
+  await expect(page.locator("[data-analytics-counting-status]")).toContainText("Not counted");
+  await expect(page.locator("[data-stats-updated-at]")).toContainText("Last refreshed");
+  await expect(page.locator("#site-activity-stats")).toContainText("Monthly browsers");
+  await expect(page.locator("#site-activity-stats")).toContainText("Listing opens");
+});
+
+test("tracking HTTP errors stay visible even when read-only public counts succeed", async ({ page }) => {
+  await page.route("**/api/site-stats", async route => {
+    const status = route.request().method() === "POST" ? 403 : 200;
+    await route.fulfill({ status, contentType: "application/json", body: status === 403
+      ? JSON.stringify({ error: "stats_bot" })
+      : JSON.stringify({ month: "2026-10", monthlyBrowsers: 0, onlineNow: 0, listingOpens: 1 }) });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Accept optional analytics" }).click();
+  await expect(page.locator("[data-analytics-counting-status]")).toContainText("HTTP 403");
+  await expect(page.locator("#site-activity-stats [data-stat='monthlyBrowsers']")).toHaveText("0");
+});
+
+test("revoking while tracking is in flight removes the record after the delayed POST", async ({ page }) => {
+  let releasePost!: () => void;
+  const postMayComplete = new Promise<void>(resolve => { releasePost = resolve; });
+  let postStarted!: () => void;
+  const postBegan = new Promise<void>(resolve => { postStarted = resolve; });
+  const calls: string[] = [];
+  let active = false;
+  await page.route("**/api/site-stats", async route => {
+    const method = route.request().method();
+    calls.push(method);
+    if (method === "POST") {
+      postStarted();
+      await postMayComplete;
+      active = true;
+    } else if (method === "DELETE") active = false;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+      month: "2026-10", monthlyBrowsers: active ? 1 : 0, onlineNow: active ? 1 : 0, listingOpens: 0,
+    }) });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Accept optional analytics" }).click();
+  await postBegan;
+  await page.getByRole("button", { name: "Analytics choices" }).click();
+  await page.getByRole("button", { name: "Reject optional analytics" }).click();
+  releasePost();
+  await expect.poll(() => calls.includes("DELETE")).toBe(true);
+  await expect.poll(() => active).toBe(false);
+  await expect(page.locator("[data-analytics-counting-status]")).toContainText("Not counted");
+  expect(calls.indexOf("DELETE")).toBeGreaterThan(calls.indexOf("POST"));
+  expect(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("perkcommons-stats-browser-")))).toEqual([]);
 });

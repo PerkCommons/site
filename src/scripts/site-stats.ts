@@ -21,6 +21,8 @@ if (panel) {
     listingOpens: panel.querySelector<HTMLElement>("[data-stat='listingOpens']"),
   };
   const monthLabel = panel.querySelector<HTMLElement>("[data-stat-month]");
+  const updatedAt = panel.querySelector<HTMLElement>("[data-stats-updated-at]");
+  let deletionInFlight = false;
   let requestInFlight = false;
   let refreshAfterCurrent = false;
   let openedThisPage = false;
@@ -72,7 +74,7 @@ if (panel) {
       : "Optional analytics not selected. No tracking is active.";
     setCountingStatus(privacySignal
       ? "Not counted on this browser: Do Not Track or Global Privacy Control is enabled."
-      : choice === "accepted" ? "Analytics accepted. This browser is counted once per month when its update succeeds."
+      : choice === "accepted" ? "Analytics accepted. Checking whether this browser's activity was recorded…"
       : choice === "rejected" ? "Not counted on this browser: optional analytics were rejected."
       : "Not counted on this browser until optional analytics are accepted.");
   }
@@ -83,6 +85,7 @@ if (panel) {
     }
     if (monthLabel && /^\d{4}-\d{2}$/.test(data.month))
       monthLabel.textContent = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${data.month}-01T12:00:00Z`));
+    if (updatedAt) updatedAt.textContent = `Last refreshed ${new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" }).format(new Date())}`;
   }
   function visitorId(): string | null {
     if (!optedIn()) return null;
@@ -98,23 +101,44 @@ if (panel) {
     } catch { return null; }
   }
   async function flushDeletionQueue(): Promise<void> {
+    // A revoked browser might still have a tracking POST in flight. Never
+    // delete before that request finishes or the late POST can recreate it.
+    if (requestInFlight || deletionInFlight) return;
+    deletionInFlight = true;
+    let attempted = 0;
     try {
-      const pending = JSON.parse(safeRead(PENDING_KEY) ?? "[]") as string[];
+      const pending = JSON.parse(safeRead(PENDING_KEY) ?? "[]") as unknown;
       if (!Array.isArray(pending)) return;
-      const failed: string[] = [];
-      for (const visitorId of pending.slice(-12)) {
+      const ids = pending.filter((id): id is string => typeof id === "string" && /^[a-f0-9-]{36}$/i.test(id)).slice(-12);
+      attempted = ids.length;
+      const failures = new Set<string>();
+      for (const visitorId of ids) {
         try {
           const response = await fetch("/api/site-stats", {
             method: "DELETE", headers: { "content-type": "application/json" },
             body: JSON.stringify({ visitorId }), credentials: "omit", cache: "no-store",
           });
-          if (!response.ok) failed.push(visitorId);
-        } catch { failed.push(visitorId); }
+          if (!response.ok) failures.add(visitorId);
+        } catch { failures.add(visitorId); }
       }
-      if (failed.length) safeWrite(PENDING_KEY, JSON.stringify(failed));
-      else localStorage.removeItem(PENDING_KEY);
+      // Preserve IDs queued while a deletion was in flight, rather than
+      // overwriting them with the old snapshot of the deletion queue.
+      const current = JSON.parse(safeRead(PENDING_KEY) ?? "[]") as unknown;
+      const remaining = Array.isArray(current)
+        ? current.filter((id): id is string => typeof id === "string" && (!ids.includes(id) || failures.has(id)))
+        : [];
+      if (remaining.length) safeWrite(PENDING_KEY, JSON.stringify(remaining.slice(-12)));
+      else try { localStorage.removeItem(PENDING_KEY); } catch {}
+      if (failures.size && choice !== "accepted") setCountingStatus("Tracking disabled. Previous browser data could not be erased yet; deletion will retry on the next visit.");
     } catch { /* Retry on the next page visit. */ }
+    finally {
+      deletionInFlight = false;
+      // Re-read counts after a successful withdrawal so a temporarily stale
+      // GET cannot leave this browser's old contribution on screen.
+      if (attempted && document.visibilityState === "visible") void refresh();
+    }
   }
+
   async function refresh(): Promise<void> {
     if (document.visibilityState !== "visible") return;
     if (requestInFlight) {
@@ -125,6 +149,7 @@ if (panel) {
     }
     requestInFlight = true;
     const id = visitorId();
+    if (optedIn() && !id) setCountingStatus("Not counted: this browser couldn't store its optional analytics ID. Check storage permissions.");
     const open = !openedThisPage && /^\/opportunities\/[a-z0-9-]+\/?$/.test(location.pathname);
     try {
       const response = await fetch("/api/site-stats", id ? {
@@ -132,23 +157,33 @@ if (panel) {
         credentials: "omit", cache: "no-store", body: JSON.stringify({ visitorId: id, open }),
       } : { method: "GET", credentials: "omit", cache: "no-store" });
       if (response.ok) {
-        present(await response.json() as Counts);
-        if (id) {
+        const data = await response.json() as Counts;
+        present(data);
+        if (id && optedIn()) {
           if (open) openedThisPage = true;
-          setCountingStatus("This browser is included in this month's visitor count once. Repeat visits don't add another browser.");
+          setCountingStatus(data.monthlyBrowsers > 0
+            ? "Confirmed: this browser's activity was recorded. Repeat visits count as the same monthly browser."
+            : "Tracking request succeeded, but the monthly total is still zero. Please report this counting issue.");
         }
       }
       else if (id) {
-        setCountingStatus(response.status === 403
-          ? "Not counted: this browser's analytics update was blocked (HTTP 403)."
-          : response.status === 429 ? "Analytics temporarily rate-limited; retrying automatically."
-          : "Analytics update failed; retrying automatically. This browser has not been counted.");
+        if (optedIn()) setCountingStatus(response.status === 403
+          ? "Not counted: this browser's activity request was blocked (HTTP 403)."
+          : response.status === 429 ? "Not counted yet: too many activity requests (HTTP 429). Retrying automatically."
+          : `Not counted: activity update failed (HTTP ${response.status}). Retrying automatically.`);
         const fallback = await fetch("/api/site-stats", { credentials: "omit", cache: "no-store" });
         if (fallback.ok) present(await fallback.json() as Counts);
       }
-    } catch { /* Leave last known counters or dashes; never invent numbers. */ }
+    } catch {
+      if (id && optedIn()) setCountingStatus("Activity update couldn't reach the server. This browser is not confirmed as counted; retrying automatically.");
+      if (updatedAt && updatedAt.textContent === "Awaiting first update") updatedAt.textContent = "Counters unavailable; retrying automatically";
+      // Leave last known counters or dashes; never invent numbers.
+    }
     finally {
       requestInFlight = false;
+      // Only now is it safe to erase a visitor that withdrew consent during
+      // an in-flight activity POST.
+      void flushDeletionQueue();
       if (refreshAfterCurrent) {
         refreshAfterCurrent = false;
         void refresh();

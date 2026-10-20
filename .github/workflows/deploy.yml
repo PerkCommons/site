@@ -143,14 +143,14 @@ jobs:
           PERKCOMMONS_SITE_SHA: ${{ github.sha }}
           PERKCOMMONS_RELEASE_CANDIDATE: "1"
           PUBLIC_SITE_URL: https://perkcommons.com
-          PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_URL: https://fspdxfhijtlebdnftkof.supabase.co
           PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
 
       - name: Validate target Supabase and prepare protected credentials
         run: node scripts/prepare-supabase-target.mjs
         env:
-          PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_URL: https://fspdxfhijtlebdnftkof.supabase.co
           PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           TARGET_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TARGET_SUPABASE_SERVICE_ROLE_KEY }}
 

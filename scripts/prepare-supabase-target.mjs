@@ -2,6 +2,9 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const projectUrl = "https://fspdxfhijtlebdnftkof.supabase.co";
+if (process.env.PUBLIC_SUPABASE_URL?.trim() !== projectUrl) {
+  throw new Error("Production switch blocked: set PUBLIC_SUPABASE_URL to " + projectUrl + " in GitHub Actions variables.");
+}
 const publishableKey = process.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
 const serviceKey = process.env.TARGET_SUPABASE_SERVICE_ROLE_KEY?.trim();
 
@@ -53,6 +56,13 @@ const admins = await verify(
 if (!Array.isArray(admins) || admins.length === 0) {
   throw new Error("The target project has no active administrator; switch blocked.");
 }
+// A key issued by the previous project can reach a public health endpoint;
+// verify the API gateway accepts the publishable key against this project.
+const publicRows = await verify("/rest/v1/opportunity_submissions?select=id&limit=1", {
+  apikey: publishableKey,
+  ...(publishableKey.startsWith("eyJ") ? { authorization: `Bearer ${publishableKey}` } : {}),
+});
+if (!Array.isArray(publicRows)) throw new Error("Unexpected public key response.");
 await verify("/auth/v1/health", { apikey: publishableKey });
 
 const directory = process.env.RUNNER_TEMP;

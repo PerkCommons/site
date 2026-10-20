@@ -147,6 +147,22 @@ jobs:
           PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
           PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
 
+      - name: Validate target Supabase and prepare protected credentials
+        run: node scripts/prepare-supabase-target.mjs
+        env:
+          PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          TARGET_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TARGET_SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Switch Cloudflare Supabase secrets together
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          trap 'rm -f "$RUNNER_TEMP/perkcommons-supabase-secrets.json"' EXIT
+          npx wrangler secret bulk "$RUNNER_TEMP/perkcommons-supabase-secrets.json" --name perkcommons-site
+
       - name: Deploy tested artifact to Cloudflare Workers
         run: npx wrangler deploy --keep-vars
         env:

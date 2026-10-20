@@ -32,7 +32,12 @@ const safeErrorMetadata = async (
 const serviceHeaders = (env: Env, extra?: HeadersInit): Headers => {
   const headers = new Headers(extra);
   headers.set("apikey", env.SUPABASE_SERVICE_ROLE_KEY);
-  headers.set("authorization", `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`);
+  // Modern sb_secret_ keys are API keys, not JWTs: Supabase rejects them
+  // in Authorization. Legacy service_role JWTs still require Bearer.
+  if (env.SUPABASE_SERVICE_ROLE_KEY.startsWith("sb_secret_"))
+    headers.delete("authorization");
+  else
+    headers.set("authorization", `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`);
   return headers;
 };
 

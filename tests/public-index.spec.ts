@@ -391,7 +391,7 @@ test("submission form sends a reviewable opportunity through the Worker", async 
   await page
     .getByLabel("Benefits (optional)")
     .fill("Up to $10,000 in project funding.");
-  await page.getByLabel("Location (optional)").fill("Global");
+  await expect(page.locator("#submission-global")).toHaveValue("true");
   await page.getByLabel("Deadline (optional)").fill("2026-12-01");
   await page.getByLabel("Your name (optional)").fill("Community Contributor");
   await page
@@ -424,7 +424,8 @@ test("submission form sends a reviewable opportunity through the Worker", async 
     organization: "Example Foundation",
     name: "Open Infrastructure Grant",
     source_url: "https://example.org/grant",
-    location: "Global",
+    global: true,
+    countries: [],
     submitter_email: "contributor@example.org",
   });
   expect(submission).toMatchObject({

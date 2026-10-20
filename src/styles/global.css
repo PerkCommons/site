@@ -7,33 +7,58 @@
   --color-canvas: #fafbfc;
   --color-surface: #ffffff;
   --color-soft: #f1f4f7;
+  /* Shared PerkCommons identity */
   --color-brand: #7467d6;
   --color-coral: #ee8293;
-  --color-action: #111827;
-  --color-action-hover: #000000;
+  --color-pink: #d98eb8;
+  --color-lavender: #b279c3;
+  --color-indigo: #7467d6;
+  /* Semantic UI colors: light mode */
+  --color-link: #5544c1;
+  --color-success: #176b43;
+  --color-warning: #825313;
+  --color-error: #9b2c2c;
+  --color-action: #6254c7;
+  --color-action-hover: #5544c1;
   --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 :root {
   color-scheme: light;
+  /* Keep every reference token available even when Tailwind prunes unused utilities. */
+  --color-link: #5544c1;
+  --color-pink: #d98eb8;
+  --color-lavender: #b279c3;
+  --color-indigo: #7467d6;
   --motion-fast: 140ms;
   --motion-medium: 220ms;
   --interaction-shadow: 0 8px 22px rgb(17 24 39 / 0.1);
 }
 html[data-theme="dark"] {
   color-scheme: dark;
-  --color-ink: #f4f6fa;
-  --color-muted: #aeb7c6;
-  --color-line: #374151;
-  --color-canvas: #0d1117;
-  --color-surface: #161b22;
-  --color-soft: #202733;
-  --color-brand: #b2a8f5;
-  --color-coral: #ff9aad;
-  --color-action: #6658c8;
-  --color-action-hover: #7568d8;
+  --color-ink: #f8fafc;
+  --color-muted: #cbd5e1;
+  --color-line: #283142;
+  --color-canvas: #0b0d12;
+  --color-surface: #11151c;
+  --color-soft: #171b23;
+  --color-brand: #b9adff;
+  --color-coral: #ee8293;
+  --color-pink: #d98eb8;
+  --color-lavender: #b279c3;
+  --color-indigo: #7467d6;
+  --color-link: #c6b8ff;
+  --color-success: #65d6a1;
+  --color-warning: #f4c46d;
+  --color-error: #fda5a5;
+  --color-action: #b9adff;
+  --color-action-hover: #c6b8ff;
   --interaction-shadow: 0 10px 28px rgb(0 0 0 / 0.34);
 }
+/* Dark CTA fills are light lavender: explicitly keep their text dark. */
+html[data-theme="dark"] .bg-action { color: #0b0d12; }
+html[data-theme="dark"] .hover\\:bg-action-hover:hover { color: #0b0d12; }
+
 html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); }
 a { text-underline-offset: 3px; }
@@ -47,10 +72,10 @@ a { text-underline-offset: 3px; }
   --pagefind-ui-border: var(--color-line);
   --pagefind-ui-tag: var(--color-soft);
 }
-.status-active { color: #176b43; background: #e7f6ee; }
-.status-limited, .status-waitlist { color: #825313; background: #fff4d6; }
+.status-active { color: var(--color-success); background: #e7f6ee; }
+.status-limited, .status-waitlist { color: var(--color-warning); background: #fff4d6; }
 .status-unconfirmed { color: #5f4b8b; background: #f0ebff; }
-.status-disputed { color: #9b2c2c; background: #fdecec; border: 1px dashed currentColor; }
+.status-disputed { color: var(--color-error); background: #fdecec; border: 1px dashed currentColor; }
 .status-expired, .status-closed, .status-archived { color: #4b5563; background: #e5e7eb; }
 .status-upcoming { color: #155e75; background: #cffafe; }
 .status-temporarily-unavailable { color: #7c2d12; background: #ffedd5; }
@@ -149,11 +174,11 @@ html[data-theme="dark"] .theme-icon-sun {
   transition-property: color, background-color, border-color, box-shadow, fill, stroke !important;
 }
 
-html[data-theme="dark"] .status-active { color: #8ee0b5; background: #173b2b; }
+html[data-theme="dark"] .status-active { color: var(--color-success); background: #173b2b; }
 html[data-theme="dark"] .status-limited,
-html[data-theme="dark"] .status-waitlist { color: #f4cf78; background: #3a2d16; }
+html[data-theme="dark"] .status-waitlist { color: var(--color-warning); background: #3a2d16; }
 html[data-theme="dark"] .status-unconfirmed { color: #d8ccff; background: #332b4f; }
-html[data-theme="dark"] .status-disputed { color: #ffb0b0; background: #472329; }
+html[data-theme="dark"] .status-disputed { color: var(--color-error); background: #472329; }
 html[data-theme="dark"] .status-expired,
 html[data-theme="dark"] .status-closed,
 html[data-theme="dark"] .status-archived { color: #d1d5db; background: #374151; }

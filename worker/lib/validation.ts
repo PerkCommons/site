@@ -1,3 +1,4 @@
+import { isCountryCode } from "../../src/lib/geography.js";
 import type { SubmissionInput } from "./types.js";
 import { RequestError } from "./http.js";
 import {
@@ -155,6 +156,21 @@ export function validateSubmission(value: unknown): SubmissionInput {
   if (deadline && !/^\d{4}-\d{2}-\d{2}$/.test(deadline))
     throw new RequestError("Deadline is invalid.", 400, "validation_failed");
 
+  // Accept legacy free-text submissions while making new structured submissions
+  // explicit and unambiguous. Store compact ISO codes in the existing location
+  // column so the change requires no unsafe production schema migration.
+  let location = optionalText(data.location, 120) ?? "Global";
+  if (data.global !== undefined || data.countries !== undefined) {
+    const countries = data.countries;
+    if (typeof data.global !== "boolean" || !Array.isArray(countries) ||
+        countries.length > 30 || countries.some((code) => !isCountryCode(code)) ||
+        new Set(countries).size !== countries.length ||
+        (data.global && countries.length > 0) || (!data.global && countries.length === 0)) {
+      throw new RequestError("Choose Global or between 1 and 30 valid countries.", 400, "validation_failed");
+    }
+    location = data.global ? "Global" : (countries as string[]).join(", ");
+  }
+
   return {
     organization: requiredText(data.organization, "Organization", 1, 100),
     name: requiredText(data.name, "Opportunity title", 1, 140),
@@ -171,7 +187,7 @@ export function validateSubmission(value: unknown): SubmissionInput {
     description: requiredText(data.description, "Description", 30, 2_000),
     eligibility: requiredText(data.eligibility, "Eligibility", 20, 2_000),
     benefits: optionalText(data.benefits, 2_000),
-    location: optionalText(data.location, 120),
+    location,
     deadline,
     submitter_name: optionalText(data.submitter_name, 100),
     submitter_email: normalizeEmail(data.submitter_email),

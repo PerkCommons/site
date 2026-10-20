@@ -44,7 +44,7 @@ export function actionAllowedForStatus(
   status: SubmissionStatus,
   action: string,
 ): boolean {
-  if (status === "pending")
+  if (status === "pending" || status === "reviewing")
     return ["approve", "decline", "flag", "notes"].includes(action);
   if (status === "flagged")
     return ["approve", "decline", "unflag", "notes"].includes(action);

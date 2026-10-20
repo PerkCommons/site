@@ -1,0 +1,46 @@
+name: Code regression checks
+on:
+  push:
+    branches: [fix/moderator-queue-global-country-selection-20261020]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: PerkCommons/data
+          ref: 8889783ca62c4a92c5cea225c05f608753aa0952
+          path: .data
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate TypeScript, schemas and unit tests
+        run: npm test
+        env:
+          PUBLIC_SUPABASE_URL: https://example.supabase.co
+          PUBLIC_SUPABASE_PUBLISHABLE_KEY: test-publishable-key
+          PUBLIC_TURNSTILE_SITE_KEY: test-public-site-key
+      - name: Build site against pinned verified catalogue
+        run: npm run build
+        env:
+          PERKCOMMONS_DATA_REPOSITORY_PATH: ${{ github.workspace }}/.data
+          PUBLIC_SITE_URL: https://perkcommons.com
+          PUBLIC_SUPABASE_URL: https://example.supabase.co
+          PUBLIC_SUPABASE_PUBLISHABLE_KEY: test-publishable-key
+          PUBLIC_TURNSTILE_SITE_KEY: test-public-site-key
+      - run: npm run audit:site
+      - name: Install Chromium for UI checks
+        run: npx playwright install --with-deps chromium
+      - name: Run browser regression suite
+        run: npm run test:browser
+        env:
+          PERKCOMMONS_DATA_REPOSITORY_PATH: ${{ github.workspace }}/.data
+          PUBLIC_SUPABASE_URL: https://example.supabase.co
+          PUBLIC_SUPABASE_PUBLISHABLE_KEY: test-publishable-key
+          PUBLIC_TURNSTILE_SITE_KEY: test-public-site-key

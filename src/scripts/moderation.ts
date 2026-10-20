@@ -1,3 +1,4 @@
+import { parseCountryCodes } from "../lib/geography";
 import {
   buildPublicationData,
   buildReviewBrief,
@@ -712,7 +713,6 @@ function fillApprovalForm(
     "status_reason",
     "global",
     "remote",
-    "countries",
     "program_url",
     "provider_url",
     "application_url",
@@ -723,6 +723,11 @@ function fillApprovalForm(
   ])
     assign(name, values[name]);
   assign("primary_category", primaryCategory);
+  const selectedCountries = Array.isArray(values.countries) ? values.countries : [];
+  form.querySelectorAll<HTMLInputElement>('input[name="countries"]').forEach((field) => {
+    field.checked = selectedCountries.includes(field.value);
+  });
+  updateApprovalGeography();
   updateApprovalSubcategories(primaryCategory, selectedSubcategories);
   form.querySelectorAll<HTMLInputElement>('input[name="claims_checked"]')
     .forEach((input) => {
@@ -745,9 +750,10 @@ function populateApproval() {
             ? draft.tags.join(", ")
             : "",
           countries: Array.isArray(draft.countries)
-            ? draft.countries.join(", ")
-            : "",
-          global: draft.global ?? "unknown",
+            ? draft.countries
+            : parseCountryCodes(submission.location),
+          global: draft.global ?? (Array.isArray(draft.countries) && draft.countries.length ||
+            (submission.location && submission.location.trim().toLowerCase() !== "global") ? "false" : "true"),
           remote: draft.remote ?? "unknown",
           sponsored: draft.sponsored ?? "unknown",
         }
@@ -768,14 +774,14 @@ function populateApproval() {
           availability_status: "",
           status_reason: "",
           global:
-            submission.location?.trim().toLowerCase() === "global"
-              ? "true"
-              : "unknown",
+            submission.location && submission.location.trim().toLowerCase() !== "global"
+              ? "false"
+              : "true",
           remote:
             submission.location?.trim().toLowerCase() === "remote"
               ? "true"
               : "unknown",
-          countries: "",
+          countries: parseCountryCodes(submission.location),
           program_url: submission.source_url,
           provider_url: submission.organization_website_url,
           application_url: "",
@@ -833,7 +839,7 @@ async function openListingUpdate(id: string) {
           typeof listing.global === "boolean" ? String(listing.global) : "unknown",
         remote:
           typeof listing.remote === "boolean" ? String(listing.remote) : "unknown",
-        countries: (listing.countries ?? []).join(", "),
+        countries: listing.countries ?? [],
         program_url:
           listing.programUrl ?? listing.sourceUrl ?? listing.officialUrl,
         provider_url: listing.providerUrl ?? "",
@@ -929,6 +935,14 @@ async function openCanonicalRemoval(id: string) {
     announcer.textContent =
       error instanceof Error ? error.message : "Could not open removal controls.";
   }
+}
+
+function updateApprovalGeography() {
+  const form = element<HTMLFormElement>("#approve-form");
+  const global = (form.elements.namedItem("global") as HTMLSelectElement).value === "true";
+  const section = element<HTMLElement>("#approval-country-section");
+  section.hidden = global;
+  form.querySelectorAll<HTMLInputElement>('input[name="countries"]').forEach((field) => { field.disabled = global; });
 }
 
 function updateApprovalSubcategories(
@@ -1211,10 +1225,12 @@ element<HTMLFormElement>("#approve-form").addEventListener(
           .replace(/^-|-$/g, ""),
       )
       .filter((tag, index, values) => tag && values.indexOf(tag) === index);
-    const countries = String(data.get("countries") ?? "")
-      .split(",")
-      .map((country) => country.trim().toUpperCase())
-      .filter((country, index, values) => country && values.indexOf(country) === index);
+    const countries = data.getAll("countries").map(String);
+    if (data.get("global") === "false" && (countries.length === 0 || countries.length > 30)) {
+      announcer.textContent = "Select between 1 and 30 eligible countries.";
+      element<HTMLInputElement>("#approval-country-search").focus();
+      return;
+    }
     const payload = {
       normalized: {
         title: data.get("title"),
@@ -1268,6 +1284,14 @@ element<HTMLFormElement>("#approve-form").addEventListener(
     await performAction("approve", payload);
   },
 );
+element<HTMLSelectElement>("#approval-global").addEventListener("change", updateApprovalGeography);
+element<HTMLInputElement>("#approval-country-search").addEventListener("input", (event) => {
+  const query = (event.currentTarget as HTMLInputElement).value.trim().toLowerCase();
+  element<HTMLElement>("#approval-country-section").querySelectorAll<HTMLElement>("[data-country-label]").forEach((label) => {
+    label.hidden = !(label.dataset.countryLabel ?? "").includes(query);
+  });
+});
+
 element<HTMLSelectElement>("#approval-category").addEventListener(
   "change",
   (event) =>

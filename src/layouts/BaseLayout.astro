@@ -31,7 +31,7 @@ const structuredData = baseStructuredData(Astro.site!);
         document.documentElement.dataset.theme = theme;
         document
           .querySelector('meta[name="theme-color"]')
-          ?.setAttribute("content", theme === "dark" ? "#0D1117" : "#FAFBFC");
+          ?.setAttribute("content", theme === "dark" ? "#0B0D12" : "#FAFBFC");
       })();
     </script>
     <link rel="icon" href="/favicon.svg" />
@@ -177,7 +177,7 @@ const structuredData = baseStructuredData(Astro.site!);
         themeToggle?.setAttribute("aria-pressed", String(dark));
         document
           .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-          ?.setAttribute("content", dark ? "#0D1117" : "#FAFBFC");
+          ?.setAttribute("content", dark ? "#0B0D12" : "#FAFBFC");
       };
       const applyTheme = (theme: "light" | "dark", persist: boolean) => {
         root.classList.add("theme-transitioning");

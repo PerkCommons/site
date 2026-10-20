@@ -3,6 +3,7 @@ import { Send } from "lucide-astro";
 import SubmissionPreview from "../components/SubmissionPreview.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { categoryDefinitions } from "../lib/taxonomy";
+import { countryOptions } from "../lib/geography";
 
 const turnstileKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY;
 const fieldClass = "mt-2 min-h-12 w-full rounded-md border border-line bg-surface px-4 py-3";
@@ -102,10 +103,27 @@ const textareaClass = `${fieldClass} resize-y`;
           </label>
 
           <div class="mt-6 grid gap-6 sm:grid-cols-2">
-            <label class="block">
-              <span class="text-sm font-medium">Location <span class="font-normal text-muted">(optional)</span></span>
-              <input name="location" maxlength="120" class={fieldClass} placeholder="Global" />
-            </label>
+            <fieldset class="sm:col-span-2">
+              <legend class="text-sm font-medium">Where is this opportunity available?</legend>
+              <p class="mt-1 text-sm text-muted">Global by default. For restricted eligibility, select every eligible country.</p>
+              <select id="submission-global" name="global" class={fieldClass}>
+                <option value="true" selected>Global — available worldwide</option>
+                <option value="false">Only selected countries</option>
+              </select>
+              <div id="submission-country-section" class="mt-4" hidden>
+                <label class="block text-sm font-medium" for="submission-country-search">Search countries</label>
+                <input id="submission-country-search" type="search" class={fieldClass} placeholder="Search by country name or code" />
+                <div class="mt-3 grid max-h-64 gap-2 overflow-y-auto rounded-md border border-line p-3 sm:grid-cols-2">
+                  {countryOptions.map((country) => (
+                    <label class="flex min-h-10 items-center gap-2 rounded px-2 py-1 text-sm hover:bg-soft" data-country-label={country.name.toLowerCase() + " " + country.code.toLowerCase()}>
+                      <input name="countries" type="checkbox" value={country.code} class="size-4 accent-brand" disabled />
+                      <span>{country.name} ({country.code})</span>
+                    </label>
+                  ))}
+                </div>
+                <p class="mt-2 text-sm text-muted">Choose at least one country (up to 30).</p>
+              </div>
+            </fieldset>
             <label class="block">
               <span class="text-sm font-medium">Deadline <span class="font-normal text-muted">(optional)</span></span>
               <input type="date" name="deadline" class={fieldClass} />
@@ -189,6 +207,7 @@ const textareaClass = `${fieldClass} resize-y`;
 
   <script>
     import { TurnstileController } from "../lib/turnstile-client";
+    import { parseCountryCodes } from "../lib/geography";
 
     const form = document.querySelector<HTMLFormElement>("#submission-form");
     const status = document.querySelector<HTMLElement>("#form-status");
@@ -197,6 +216,21 @@ const textareaClass = `${fieldClass} resize-y`;
     const categorySelect = document.querySelector<HTMLSelectElement>("#primary-category");
     const subcategoryPrompt = document.querySelector<HTMLElement>("#subcategory-prompt");
     const subcategoryGroups = [...document.querySelectorAll<HTMLElement>("[data-subcategory-group]")];
+    const countrySection = document.querySelector<HTMLElement>("#submission-country-section");
+    const countrySearch = document.querySelector<HTMLInputElement>("#submission-country-search");
+    const countryBoxes = [...document.querySelectorAll<HTMLInputElement>('#submission-form input[name="countries"]')];
+    const selectedCountries = () => countryBoxes.filter((field) => field.checked).map((field) => field.value);
+    const globalAvailability = () => (form?.elements.namedItem("global") as HTMLSelectElement | null)?.value !== "false";
+    const updateCountrySelection = () => {
+      if (countrySection) countrySection.hidden = globalAvailability();
+      countryBoxes.forEach((field) => { field.disabled = globalAvailability(); });
+    };
+    countrySearch?.addEventListener("input", () => {
+      countryBoxes.forEach((field) => {
+        const label = field.closest<HTMLElement>("[data-country-label]");
+        if (label) label.hidden = !(label.dataset.countryLabel ?? "").includes(countrySearch?.value.trim().toLowerCase() ?? "");
+      });
+    });
 
     const preview = {
       provider: document.querySelector<HTMLElement>("#preview-provider"),
@@ -222,18 +256,30 @@ const textareaClass = `${fieldClass} resize-y`;
         : "";
     };
     const draftKey = "perkcommons-next-submission-draft-v1";
-    const draftFields = ["organization", "name", "primary_category", "tags", "description", "eligibility", "benefits", "location", "deadline", "source_url", "organization_website_url"];
+    const draftFields = ["organization", "name", "primary_category", "tags", "description", "eligibility", "benefits", "global", "deadline", "source_url", "organization_website_url"];
     const restoreDraft = () => {
       if (!form) return;
       try {
-        const saved = JSON.parse(localStorage.getItem(draftKey) ?? "null") as { fields?: Record<string, string>; subcategories?: string[] } | null;
+        const saved = JSON.parse(localStorage.getItem(draftKey) ?? "null") as { fields?: Record<string, string>; subcategories?: string[]; countries?: string[] } | null;
         if (!saved?.fields) return;
         for (const name of draftFields) {
           const field = form.elements.namedItem(name);
           if ((field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) && saved.fields[name] !== undefined) field.value = saved.fields[name]!;
         }
         for (const checkbox of form.querySelectorAll<HTMLInputElement>('input[name="subcategories"]')) checkbox.checked = saved.subcategories?.includes(checkbox.value) ?? false;
-        if (draftStatus) draftStatus.textContent = "Local draft restored.";
+        // Preserve legacy ISO-code drafts without guessing unknown geography.
+        const previousLocation = saved.fields.location?.trim() ?? "";
+        const migratedCountries = saved.countries ??
+          (previousLocation.toLowerCase() === "global" ? [] : parseCountryCodes(previousLocation));
+        if (!saved.fields.global && migratedCountries.length) {
+          const scope = form.elements.namedItem("global");
+          if (scope instanceof HTMLSelectElement) scope.value = "false";
+        }
+        countryBoxes.forEach((field) => { field.checked = migratedCountries.includes(field.value); });
+        if (draftStatus) draftStatus.textContent =
+          previousLocation && previousLocation.toLowerCase() !== "global" && !migratedCountries.length
+            ? "Draft restored. Review your previous location: " + previousLocation + ". Select eligible countries."
+            : "Local draft restored.";
       } catch { localStorage.removeItem(draftKey); }
     };
     const saveDraft = () => {
@@ -242,6 +288,7 @@ const textareaClass = `${fieldClass} resize-y`;
         localStorage.setItem(draftKey, JSON.stringify({
           fields: Object.fromEntries(draftFields.map((name) => [name, valueOf(name)])),
           subcategories: [...form.querySelectorAll<HTMLInputElement>('input[name="subcategories"]:checked')].map((field) => field.value),
+          countries: selectedCountries(),
         }));
         if (draftStatus) draftStatus.textContent = "Draft saved locally.";
       } catch { if (draftStatus) draftStatus.textContent = "Local draft could not be saved."; }
@@ -305,7 +352,9 @@ const textareaClass = `${fieldClass} resize-y`;
       if (preview.title) preview.title.textContent = valueOf("name") || "Opportunity title";
       if (preview.description) preview.description.textContent = valueOf("description") || "Your description will appear here.";
       if (preview.eligibility) preview.eligibility.textContent = valueOf("eligibility") || "Who can access this opportunity?";
-      if (preview.location) preview.location.textContent = valueOf("location") || "Global";
+      if (preview.location) preview.location.textContent = globalAvailability()
+        ? "Global"
+        : selectedCountries().map((code) => countryBoxes.find((box) => box.value === code)?.closest("label")?.querySelector("span")?.textContent?.trim() ?? code).join(", ") || "Select eligible countries";
 
       const selectedCategory = categorySelect?.selectedOptions[0];
       if (preview.category) preview.category.textContent = categorySelect?.value ? selectedCategory?.textContent?.trim() || "Category" : "Choose a category";
@@ -342,7 +391,7 @@ const textareaClass = `${fieldClass} resize-y`;
       updatePreview();
     });
     let draftTimer = 0;
-    const updateAndSave = () => { updatePreview(); window.clearTimeout(draftTimer); draftTimer = window.setTimeout(saveDraft, 250); };
+    const updateAndSave = () => { updateCountrySelection(); updatePreview(); window.clearTimeout(draftTimer); draftTimer = window.setTimeout(saveDraft, 250); };
     form?.addEventListener("input", updateAndSave);
     form?.addEventListener("change", updateAndSave);
     restoreDraft();
@@ -351,6 +400,7 @@ const textareaClass = `${fieldClass} resize-y`;
       if (field instanceof HTMLElement) field.addEventListener("blur", () => void checkDuplicate());
     }
     updateSubcategories();
+    updateCountrySelection();
     updatePreview();
 
     const turnstileContainer =
@@ -366,6 +416,11 @@ const textareaClass = `${fieldClass} resize-y`;
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!form.reportValidity()) return;
+      if (!globalAvailability() && (selectedCountries().length < 1 || selectedCountries().length > 30)) {
+        if (status) status.textContent = "Select between 1 and 30 eligible countries.";
+        countrySearch?.focus();
+        return;
+      }
 
       const formData = new FormData(form);
       if (formData.get("website")) return;
@@ -398,7 +453,8 @@ const textareaClass = `${fieldClass} resize-y`;
             description: String(formData.get("description") ?? "").trim(),
             eligibility: String(formData.get("eligibility") ?? "").trim(),
             benefits: optionalValue("benefits"),
-            location: optionalValue("location"),
+            global: globalAvailability(),
+            countries: globalAvailability() ? [] : selectedCountries(),
             deadline: optionalValue("deadline"),
             submitter_name: optionalValue("submitter_name"),
             submitter_email: optionalValue("submitter_email"),
@@ -422,6 +478,7 @@ const textareaClass = `${fieldClass} resize-y`;
         try { localStorage.removeItem(draftKey); } catch {}
         if (draftStatus) draftStatus.textContent = "Local draft cleared after submission.";
         updateSubcategories();
+        updateCountrySelection();
         updatePreview();
         if (status) status.textContent = "Submitted. A moderator will review the evidence before publication.";
       } catch (error) {

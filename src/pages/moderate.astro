@@ -16,6 +16,7 @@ import {
 } from "lucide-astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { categoryDefinitions } from "../lib/taxonomy";
+import { countryOptions } from "../lib/geography";
 ---
 
 <BaseLayout
@@ -656,10 +657,10 @@ import { categoryDefinitions } from "../lib/taxonomy";
           /></label
         >
         <label
-          ><span class="text-sm font-medium">Global availability</span><select
-            name="global"
+          ><span class="text-sm font-medium">Geographic availability</span><select
+            id="approval-global" name="global"
             class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
-          ><option value="unknown">Unknown</option><option value="true">Yes</option><option value="false">No</option></select></label
+          ><option value="true" selected>Global (default)</option><option value="false">Selected countries only</option></select></label
         >
         <label
           ><span class="text-sm font-medium">Remote availability</span><select
@@ -667,14 +668,18 @@ import { categoryDefinitions } from "../lib/taxonomy";
             class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
           ><option value="unknown">Unknown</option><option value="true">Yes</option><option value="false">No</option></select></label
         >
-        <label
-          ><span class="text-sm font-medium">Country codes</span><input
-            name="countries"
-            maxlength="120"
-            placeholder="US, CA, PL"
-            class="mt-1 min-h-11 w-full rounded-md border border-line px-3"
-          /></label
-        >
+        <fieldset id="approval-country-section" class="sm:col-span-2" hidden>
+          <legend class="text-sm font-medium">Eligible countries (choose 1–30)</legend>
+          <input id="approval-country-search" type="search" placeholder="Search countries" aria-label="Search eligible countries" class="mt-2 min-h-11 w-full rounded-md border border-line px-3" />
+          <div class="mt-2 grid max-h-64 gap-2 overflow-y-auto rounded-md border border-line p-3 sm:grid-cols-2">
+            {countryOptions.map((country) => (
+              <label data-country-label={country.name.toLowerCase() + " " + country.code.toLowerCase()} class="flex min-h-11 items-center gap-2 text-sm">
+                <input name="countries" type="checkbox" value={country.code} disabled />
+                <span>{country.name} ({country.code})</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <label class="sm:col-span-2"
           ><span class="text-sm font-medium">Program URL</span><input
             required

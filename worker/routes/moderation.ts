@@ -1,3 +1,4 @@
+import { isCountryCode, parseCountryCodes } from "../../src/lib/geography.js";
 import {
   clearSessionCookie,
   requireModerator,
@@ -141,7 +142,8 @@ export async function queue(request: Request, env: Env): Promise<Response> {
   if (categoryParameter && !category)
     throw new RequestError("Unknown opportunity category.", 400, "invalid_category");
   const categoryFilter = category ? `&primary_category=eq.${category}` : "";
-  const query = `/rest/v1/opportunity_submissions?status=eq.${status}${categoryFilter}&select=${submissionSelect}&order=created_at.asc&limit=50`;
+  const statusFilter = status === "pending" ? "in.(pending,reviewing)" : `eq.${status}`;
+  const query = `/rest/v1/opportunity_submissions?status=${statusFilter}${categoryFilter}&select=${submissionSelect}&order=created_at.asc&limit=50`;
   const { data } = await supabaseRequest<unknown[]>(env, query);
   return json({ queue: status, count: data.length, submissions: data });
 }
@@ -159,7 +161,8 @@ export async function queueSummary(request: Request, env: Env): Promise<Response
   if (after && Number.isNaN(Date.parse(after))) throw new RequestError("Queue cursor is invalid.", 400, "invalid_cursor");
   const categoryFilter = category ? `&primary_category=eq.${category}` : "";
   const cursorFilter = after ? `&created_at=gt.${encodeURIComponent(after)}` : "";
-  const query = `/rest/v1/opportunity_submissions?status=eq.${status}${categoryFilter}${cursorFilter}&select=${submissionSummarySelect}&order=created_at.asc,id.asc&limit=${limit}`;
+  const statusFilter = status === "pending" ? "in.(pending,reviewing)" : `eq.${status}`;
+  const query = `/rest/v1/opportunity_submissions?status=${statusFilter}${categoryFilter}${cursorFilter}&select=${submissionSummarySelect}&order=created_at.asc,id.asc&limit=${limit}`;
   const result = await supabaseRequest<Array<{ id: string; created_at: string }>>(env, query, { headers: { prefer: "count=exact" } });
   const total = Number(result.response.headers.get("content-range")?.split("/")[1] ?? result.data.length);
   return json({
@@ -269,7 +272,7 @@ const normalizedData = (value: unknown): Record<string, unknown> => {
     throw new RequestError("Tags are invalid.", 400, "validation_failed");
   if (
     !Array.isArray(countries) || countries.length > 30 ||
-    countries.some((country) => typeof country !== "string" || !/^[A-Z]{2}$/.test(country)) ||
+    countries.some((country) => !isCountryCode(country)) ||
     new Set(countries).size !== countries.length
   )
     throw new RequestError("Countries are invalid.", 400, "validation_failed");
@@ -331,9 +334,14 @@ const normalizedData = (value: unknown): Record<string, unknown> => {
     )
   )
     throw new RequestError("Physical locations are invalid.", 400, "validation_failed");
+  const inferredCountries = countries.length ? countries : parseCountryCodes(location);
+  const resolvedGlobal = triState("global") ??
+    (inferredCountries.length === 0 && (!location || ["global", "remote", "online"].includes(location.toLowerCase())));
+  if ((resolvedGlobal && inferredCountries.length > 0) || (!resolvedGlobal && inferredCountries.length === 0))
+    throw new RequestError("Choose Global or specify eligible countries.", 400, "validation_failed");
   const physicalLocations = Array.isArray(physicalLocationInput)
     ? physicalLocationInput.map((item) => String(item).trim())
-    : location && !["global", "remote", "online"].includes(location.toLowerCase())
+    : location && !["global", "remote", "online"].includes(location.toLowerCase()) && inferredCountries.length === 0
       ? [location]
       : [];
   return {
@@ -356,9 +364,9 @@ const normalizedData = (value: unknown): Record<string, unknown> => {
     status_reason: text("status_reason", 1_000, false),
     deadline_type: deadlineType,
     application_cycle: applicationCycle,
-    global: triState("global"),
+    global: resolvedGlobal,
     remote: triState("remote"),
-    countries,
+    countries: inferredCountries,
     physical_locations: physicalLocations,
     provider_url: providerUrl,
     program_url: programUrl,

@@ -1,0 +1,39 @@
+name: Cloudflare configuration audit
+on:
+  push:
+    branches:
+      - fix/moderation-queue-production-schema-compat-20261020
+permissions:
+  contents: read
+jobs:
+  cloudflare-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Inspect binding presence and intended Supabase URL safely
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module <<'JS'
+          const id = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          if (!id || !token) throw new Error('Cloudflare CI credentials are missing');
+          const url = `https://api.cloudflare.com/client/v4/accounts/${id}/workers/scripts/perkcommons-site/settings`;
+          const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }});
+          if (!res.ok) throw new Error('Cloudflare settings unavailable: HTTP ' + res.status);
+          const obj = await res.json();
+          if (!obj.success) throw new Error('Cloudflare settings API returned an error');
+          const bindings = obj.result?.bindings || [];
+          for (const name of ['SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SERVICE_ROLE_KEY',
+            'TURNSTILE_SITE_KEY', 'TURNSTILE_SECRET_KEY']) {
+            const b = bindings.find((entry) => entry.name === name);
+            const value = typeof b?.text === 'string' ? b.text : null;
+            const isUrl = name === 'SUPABASE_URL';
+            console.log(name, b ? b.type : 'MISSING',
+              isUrl && value ? new URL(value).hostname : '');
+          }
+          JS

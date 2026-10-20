@@ -1,8 +1,10 @@
 name: Cloudflare configuration audit
 on:
   push:
-    branches:
-      - fix/moderation-queue-production-schema-compat-20261020
+    branches: [main]
+    paths:
+      - .github/workflows/cloudflare-config-audit.yml
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
